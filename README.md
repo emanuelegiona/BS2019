@@ -7,7 +7,9 @@ Project for Biometric Systems course (A.Y. 2018/2019)
 - backend                   # directory for all the backend source code
     |__ audio.py
     |__ azure.py
+    |__ hill_myna_be.py
     |__ rest_client.py
+    |__ words.py
 - data                      # data needed by Hill Myna to run
     |__ credentials.csv     # Microsoft Azure credentials to access Speech Services and Cognitive Services
 - tmp                       # directory for temporary files
