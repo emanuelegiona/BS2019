@@ -6,5 +6,5 @@ libs:
 
 pip:
 	@echo "\nInstalling Python packages using PIP\n"
-	pip install scipy
+	pip install soundfile
 	pip install sounddevice
