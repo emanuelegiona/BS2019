@@ -19,7 +19,7 @@ Project for Biometric Systems course (A.Y. 2018/2019), code name: Hill Myna.
 ```
 
 ## Funny fact
-[Hill myna][1] is one of the many species of birds capable to imitate human speech.
+[Hill myna][1] is one of the many species of birds capable of imitating human speech.
 In this project, you will get to repeat random words like a typical hill myna would, in order to get identified and possibly
 avoid spoofing techniques such as replay attacks.
 
