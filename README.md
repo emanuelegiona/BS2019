@@ -3,6 +3,7 @@ Project for Biometric Systems course (A.Y. 2018/2019), code name: Hill Myna.
 
 ## Project structure
 ```
+- Makefile                  # 'make' will take care of all the dependencies required
 - hill_myna.py              # Starts the GUI
 - backend                   # directory for all the backend source code
     |__ audio.py
