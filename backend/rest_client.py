@@ -12,9 +12,10 @@ import json
 SimpleResponse object returns the outcome of a REST request, in the following format:
 - code      HTTP status code (200, 404, 500, ...) for the request, or -1 in case an exception is raised
 - content   response content as JSON object, or plain HTML code of the web page as a string
+- headers   response headers, or None
 - message   textual message associated to the previous fields, either HTTP reason ("OK", "Not Found", ...) or an exception message
 """
-SimpleResponse = namedtuple("SimpleResponse", "code content message")
+SimpleResponse = namedtuple("SimpleResponse", "code content headers message")
 
 
 class RESTClient:
@@ -70,9 +71,11 @@ class RESTClient:
             content = None
             msg = "General error"
 
-        return SimpleResponse(code=code, content=content, message=msg)
+        return SimpleResponse(code=code, content=content, headers=None, message=msg)
 
-    def post(self, url: str, body: json = None, data: typing.BinaryIO = None, headers: dict = None, params: dict = None, expect_json: bool = True) -> SimpleResponse:
+    def post(self, url: str, body: json = None, data: typing.BinaryIO = None,
+             headers: dict = None, params: dict = None,
+             expect_json: bool = True, response_headers: bool = False) -> SimpleResponse:
         """
         Performs an HTTP POST request.
         :param url: URL to which perform the POST request to
@@ -81,10 +84,12 @@ class RESTClient:
         :param headers: HTTP headers to be specified
         :param params: HTTP parameters to be passed in the URL querystring
         :param expect_json: if True, the client expects a JSON content response and will try to parse it, otherwise it will read plain HTML from the web page
+        :param response_headers: if True, the returning SimpleResponse will also contain the response headers, otherwise None
         :return: SimpleResponse object as previously defined
         """
         code = -1
         content = None
+        resp_headers = None
         msg = ""
         try:
             if body is not None and data is not None:
@@ -113,6 +118,7 @@ class RESTClient:
                                                                        msg=msg))
             # fetch JSON in case it is expected one, otherwise retrieve response body as a string
             content = req.json() if expect_json else str(req.text)
+            resp_headers = req.headers if response_headers else None
             req.close()
         except JSONDecodeError:
             content = None
@@ -127,7 +133,7 @@ class RESTClient:
             content = None
             msg = str(e)
 
-        return SimpleResponse(code=code, content=content, message=msg)
+        return SimpleResponse(code=code, content=content, headers=resp_headers, message=msg)
 
     def delete(self, url: str, headers: dict = None, params: dict = None, expect_json: bool = True) -> SimpleResponse:
         """
@@ -168,7 +174,7 @@ class RESTClient:
             content = None
             msg = "General error"
 
-        return SimpleResponse(code=code, content=content, message=msg)
+        return SimpleResponse(code=code, content=content, headers=None, message=msg)
 
 
 if __name__ == "__main__":
