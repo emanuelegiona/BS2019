@@ -4,6 +4,7 @@ This file contains source code for every Microsoft Azure interaction involved in
 from rest_client import RESTClient, SimpleResponse
 from collections import namedtuple
 from datetime import datetime
+from typing import List
 import time
 import os.path
 import json
@@ -75,11 +76,11 @@ class SpeechToTextClient:
         """
         SpeechToTextClient constructor.
         :param credentials: Credentials object associated to the SpeechToText resource
-        :param debug: if True, debug messages are printed to the standard output
+        :param debug: if True, __debug messages are printed to the standard output
         """
 
         self.credentials = credentials
-        self.debug = debug
+        self.__debug = debug
 
         # Azure token to perform SpeechToText API requests, additionally to credentials
         self.token = None
@@ -88,7 +89,7 @@ class SpeechToTextClient:
         self.token_timestamp = None
 
         # REST client to be used for all Azure requests
-        self.client = RESTClient(debug=self.debug)
+        self.client = RESTClient(debug=self.__debug)
 
     def __authenticate(self) -> None:
         """
@@ -158,7 +159,242 @@ class IdentificationClient:
     """
     This class implements an Azure client for the Speaker Recognition REST API regarding the identification task.
     """
-    pass
+
+    def __init__(self, credentials: Credentials, debug: bool = False):
+        """
+        IdentificationClient constructor.
+        :param credentials: Credentials object associated to the Identification resource
+        :param debug: if True, debug messages are printed to the standard output
+        """
+
+        self.credentials = credentials
+        self.__debug = debug
+
+        # REST client to be used for all Azure requests
+        self.client = RESTClient(debug=self.__debug)
+
+    # --- profile management ---
+    def new_profile(self) -> str:
+        """
+        Creates a new profile for identification purposes.
+        :return: Azure profile ID in case of success, raises an error otherwise
+        """
+
+        trailing_url = "identificationProfiles"
+        headers = {"Ocp-Apim-Subscription-Key": self.credentials.key,
+                   "Content-Type": "application/json"}
+        service_url = "{endpoint}{trailer}".format(endpoint=self.credentials.endpoint,
+                                                   trailer=trailing_url)
+        body = {"locale": "en-US"}
+        body = json.dumps(body)
+
+        response = self.client.post(url=service_url,
+                                    headers=headers,
+                                    body=body)
+
+        if response.code != 200:
+            msg = response.content["message"]
+            raise RuntimeError("New profile failed: POST responded with {code} {msg}".format(code=response.code,
+                                                                                             msg=msg))
+
+        profile_id = response.content["identificationProfileId"]
+        if self.__debug:
+            print("Profile ID: {id}".format(id=profile_id))
+
+        return profile_id
+
+    def del_profile(self, profile_id: str) -> bool:
+        """
+        Deletes the profile associated to the given profile ID.
+        :param profile_id: Azure profile ID
+        :return: True in case of success, raises an error otherwise
+        """
+
+        trailing_url = "identificationProfiles/{id}".format(id=profile_id)
+        headers = {"Ocp-Apim-Subscription-Key": self.credentials.key}
+        service_url = "{endpoint}{trailer}".format(endpoint=self.credentials.endpoint,
+                                                   trailer=trailing_url)
+
+        response = self.client.delete(url=service_url,
+                                      headers=headers)
+
+        if response.code != 200:
+            msg = response.content["message"]
+            raise RuntimeError("Delete profile failed: POST responded with {code} {msg}".format(code=response.code,
+                                                                                                msg=msg))
+
+        return True
+
+    def new_enrolment(self, profile_id: str, audio_path: str, short_audio: bool = False) -> str:
+        """
+        Creates a new enrolment request for the given profile with the given audio file.
+        :param profile_id: Azure profile ID
+        :param audio_path: Path to the audio file
+        :param short_audio: if True, audio can be as short as 1 second; otherwise, minimum length is 5 seconds (5 minuts max anyway)
+        :return: URL to query for the status of this enrolment request, raises an error otherwise
+        """
+
+        if not os.path.exists(audio_path):
+            raise FileNotFoundError("{file} not found.".format(file=audio_path))
+        if not os.path.isfile(audio_path):
+            raise FileNotFoundError("{file} must be a regular file.".format(file=audio_path))
+
+        trailing_url = "identificationProfiles/{id}/enroll".format(id=profile_id)
+        headers = {"Ocp-Apim-Subscription-Key": self.credentials.key,
+                   "Content-Type": "multipart/form-data"}
+        parameters = {"shortAudio": short_audio}
+        service_url = "{endpoint}{trailer}".format(endpoint=self.credentials.endpoint,
+                                                   trailer=trailing_url)
+
+        with open(audio_path, "rb") as file:
+            response = self.client.post(url=service_url,
+                                        headers=headers,
+                                        params=parameters,
+                                        data=file,
+                                        response_headers=True)
+
+        if response.code != 202:
+            msg = response.content["message"]
+            raise RuntimeError("Enrolment failed: POST responded with {code} {msg}".format(code=response.code,
+                                                                                           msg=msg))
+
+        enrolment_url = response.headers["Operation-Location"]
+        if self.__debug:
+            print("Enrolment URL: {url}".format(url=enrolment_url))
+
+        return enrolment_url
+
+    def reset_enrolments(self, profile_id: str) -> bool:
+        """
+        Resets all the enrolments performed on the given profile, setting its status back to "Enrolling".
+        :param profile_id: Azure profile ID
+        :return: True in case of success, raises an error otherwise
+        """
+
+        trailing_url = "identificationProfiles/{id}/reset".format(id=profile_id)
+        headers = {"Ocp-Apim-Subscription-Key": self.credentials.key}
+        service_url = "{endpoint}{trailer}".format(endpoint=self.credentials.endpoint,
+                                                   trailer=trailing_url)
+
+        response = self.client.post(url=service_url,
+                                    headers=headers)
+
+        if response.code != 200:
+            msg = response.content["message"]
+            raise RuntimeError("Reset enrolments failed: POST responded with {code} {msg}".format(code=response.code,
+                                                                                                  msg=msg))
+
+        return True
+
+    def get_profile(self, profile_id: str) -> json:
+        """
+        Returns the status and some stats of the given profile.
+        :param profile_id: Azure profile ID
+        :return: JSON in case of success, raises an error otherwise
+        """
+
+        trailing_url = "identificationProfiles/{id}".format(id=profile_id)
+        headers = {"Ocp-Apim-Subscription-Key": self.credentials.key}
+        service_url = "{endpoint}{trailer}".format(endpoint=self.credentials.endpoint,
+                                                   trailer=trailing_url)
+
+        response = self.client.get(url=service_url,
+                                   headers=headers)
+
+        if response.code != 200:
+            msg = response.content["message"]
+            raise RuntimeError("Get profile failed: POST responded with {code} {msg}".format(code=response.code,
+                                                                                             msg=msg))
+
+        return response.content
+
+    def all_profiles(self) -> json:
+        """
+        Gets status and stats for all the registered profiles.
+        :return: JSON in case of success, raises an error otherwise
+        """
+
+        trailing_url = "identificationProfiles"
+        headers = {"Ocp-Apim-Subscription-Key": self.credentials.key}
+        service_url = "{endpoint}{trailer}".format(endpoint=self.credentials.endpoint,
+                                                   trailer=trailing_url)
+
+        response = self.client.get(url=service_url,
+                                   headers=headers)
+
+        if response.code != 200:
+            msg = response.content["message"]
+            raise RuntimeError("Get all profiles failed: POST responded with {code} {msg}".format(code=response.code,
+                                                                                                  msg=msg))
+
+        return response.content
+
+    # --- identification ---
+    def new_identification(self, audio_path: str, candidate_ids: List[str], short_audio: bool = False) -> str:
+        """
+        Creates a new request to identify a profile among the given candidates for the given audio file.
+        :param audio_path: Path to the audio file
+        :param candidate_ids: List of candidate Azure profile IDs
+        :param short_audio: if True, audio can be as short as 1 second; otherwise, minimum length is 5 seconds (5 minutes max anyway)
+        :return: URL to query for the status of this identification request, raises an error otherwise
+        """
+
+        if not os.path.exists(audio_path):
+            raise FileNotFoundError("{file} not found.".format(file=audio_path))
+        if not os.path.isfile(audio_path):
+            raise FileNotFoundError("{file} must be a regular file.".format(file=audio_path))
+        if len(candidate_ids) > 10:
+            raise RuntimeError("Candidate IDs list must not exceed the size of 10.")
+        if len(set(candidate_ids)) <= 1:
+            raise RuntimeError("Candidate IDs list must contain at least 2 distinct IDs.")
+
+        trailing_url = "identify"
+        headers = {"Ocp-Apim-Subscription-Key": self.credentials.key,
+                   "Content-Type": "application/octet-stream"}
+        parameters = {"identificationProfileIds": ",".join(candidate_ids),
+                      "shortAudio": short_audio}
+        service_url = "{endpoint}{trailer}".format(endpoint=self.credentials.endpoint,
+                                                   trailer=trailing_url)
+
+        with open(audio_path, "rb") as file:
+            response = self.client.post(url=service_url,
+                                        headers=headers,
+                                        params=parameters,
+                                        data=file,
+                                        response_headers=True)
+
+        if response.code != 202:
+            msg = response.content["message"]
+            raise RuntimeError("Enrolment failed: POST responded with {code} {msg}".format(code=response.code,
+                                                                                           msg=msg))
+
+        identification_url = response.headers["Operation-Location"]
+        if self.__debug:
+            print("Identification URL: {url}".format(url=identification_url))
+
+        return identification_url
+
+    def operation_status(self, operation_id: str) -> json:
+        """
+        Returns status of the given operation.
+        :param operation_id: Azure operation ID
+        :return: JSON containing the status in case of success, raises an error otherwise
+        """
+
+        trailing_url = "operations/{id}".format(id=operation_id)
+        headers = {"Ocp-Apim-Subscription-Key": self.credentials.key}
+        service_url = "{endpoint}{trailer}".format(endpoint=self.credentials.endpoint,
+                                                   trailer=trailing_url)
+
+        response = self.client.get(url=service_url,
+                                   headers=headers)
+
+        if response.code != 200:
+            msg = response.content["message"]
+            raise RuntimeError("Get operation status failed: POST responded with {code} {msg}".format(code=response.code,
+                                                                                                      msg=msg))
+
+        return response.content
 
 
 if __name__ == "__main__":
