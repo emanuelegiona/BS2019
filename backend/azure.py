@@ -76,7 +76,7 @@ class SpeechToTextClient:
         """
         SpeechToTextClient constructor.
         :param credentials: Credentials object associated to the SpeechToText resource
-        :param debug: if True, __debug messages are printed to the standard output
+        :param debug: if True, debug messages are printed to the standard output
         """
 
         self.credentials = credentials
