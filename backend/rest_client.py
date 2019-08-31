@@ -90,7 +90,6 @@ class RESTClient:
             if body is not None and data is not None:
                 raise RequestException("Parameters 'body' and 'data' are mutually exclusive.")
 
-            req = None
             if body is not None:
                 req = requests.post(url=url,
                                     headers=headers,
@@ -101,6 +100,10 @@ class RESTClient:
                                     headers=headers,
                                     params=params,
                                     data=data)
+            else:
+                req = requests.post(url=url,
+                                    headers=headers,
+                                    params=params)
 
             code = req.status_code
             msg = req.reason
