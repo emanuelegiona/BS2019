@@ -16,7 +16,7 @@ SimpleResponse object returns the outcome of a REST request, in the following fo
 SimpleResponse = namedtuple("SimpleResponse", "code content message")
 
 
-class Client:
+class RESTClient:
     """
     REST client implementing the HTTP methods that are required in order to work with Microsoft Azure.
     This wrapper class doesn't target any specific Azure service.
@@ -157,7 +157,7 @@ class Client:
 
 
 if __name__ == "__main__":
-    c = Client(debug=True)
+    c = RESTClient(debug=True)
     j = c.get(url="http://httpbin.org/get")
     print(j)
 
