@@ -190,9 +190,9 @@ class IdentificationClient:
 
         return True
 
-    def new_enrolment(self, profile_id: str, audio_path: str, short_audio: bool = False) -> str:
+    def new_enrollment(self, profile_id: str, audio_path: str, short_audio: bool = False) -> str:
         """
-        Creates a new enrolment request for the given profile with the given audio file.
+        Creates a new enrollment request for the given profile with the given audio file.
         :param profile_id: Azure profile ID
         :param audio_path: Path to the audio file
         :param short_audio: if True, audio can be as short as 1 second; otherwise, minimum length is 5 seconds (5 minuts max anyway)
@@ -220,18 +220,18 @@ class IdentificationClient:
 
         if response.code != 202:
             msg = response.content["message"]
-            raise RuntimeError("Enrolment failed: POST responded with {code} {msg}".format(code=response.code,
-                                                                                           msg=msg))
+            raise RuntimeError("Enrollment failed: POST responded with {code} {msg}".format(code=response.code,
+                                                                                            msg=msg))
 
         enrolment_url = response.headers["Operation-Location"]
         if self.__debug:
-            print("Enrolment URL: {url}".format(url=enrolment_url))
+            print("Enrollment URL: {url}".format(url=enrolment_url))
 
         return enrolment_url
 
-    def reset_enrolments(self, profile_id: str) -> bool:
+    def reset_enrollments(self, profile_id: str) -> bool:
         """
-        Resets all the enrolments performed on the given profile, setting its status back to "Enrolling".
+        Resets all the enrollments performed on the given profile, setting its status back to "Enrolling".
         :param profile_id: Azure profile ID
         :return: True in case of success, raises an error otherwise
         """
@@ -246,8 +246,8 @@ class IdentificationClient:
 
         if response.code != 200:
             msg = response.content["message"]
-            raise RuntimeError("Reset enrolments failed: POST responded with {code} {msg}".format(code=response.code,
-                                                                                                  msg=msg))
+            raise RuntimeError("Reset enrollments failed: POST responded with {code} {msg}".format(code=response.code,
+                                                                                                   msg=msg))
 
         return True
 
