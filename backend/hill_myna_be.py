@@ -4,6 +4,10 @@ This file contains the Hill Myna backend source code, which is directly called b
 from azure import Credentials, CredentialsManager, SpeechToTextClient, IdentificationClient
 from words import WordManager
 from typing import List
+import tempfile  as tf
+from audio import audio
+from datetime import datetime
+import time
 
 
 class HillMyna:
@@ -65,7 +69,6 @@ class HillMyna:
     def speech_to_text(self, audio_path: str):
         pass
     # --- --- ---
-
     # --- Benchmarks ---
     # threshold tuning, spoofing attacks
     # --- --- ---
@@ -77,9 +80,13 @@ if __name__ == "__main__":
 
     if RECORD_AUDIO:
         # do the recording and get the path
-        audio_path = "path/to/audio"
-        pass
+        a = datetime.utcnow()
+        ts=time.mktime(a.timetuple())
+        audio_path = "Audio{timestamp}".format(timestamp=ts)
+        audio_to_text = audio().rec(6, path=audio_path)
+
 
     # Azure speech-to-text stuff
     # ...
     pass
+    # --- --- ---
