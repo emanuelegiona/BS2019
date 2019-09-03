@@ -14,6 +14,7 @@ Project for Biometric Systems course (A.Y. 2018/2019), code name: Hill Myna.
     |__ words.py
 - data                      # data needed by Hill Myna to run
     |__ credentials.csv     # Microsoft Azure credentials to access Speech Services and Cognitive Services
+    |__ words.txt           # Words for anti-spoofing reasons
 - tmp                       # directory for temporary files
 - LICENSE                   # GNU AGPL v3.0
 - README                    # this file
