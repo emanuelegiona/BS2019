@@ -27,12 +27,13 @@ sd.wait()
 
 sd.default.samplerate = 16000
 
+
 class audio:
 
     def __init__(self):
         pass
 
-    def rec(duration: float, fs:int =sd.default.samplerate, path:str=None, block:bool=False):
+    def rec(self, duration: float, fs: int = sd.default.samplerate, path: str = None, block: bool = False):
         """
         Records and returns an audio sample from default device. If path is not None, the sample will be locally stored to path.
         :param duration: is an integer that indicates how many seconds of recording will be performed.
@@ -48,16 +49,16 @@ class audio:
             sf.write(path, myrecording, fs)
         return myrecording
 
-    def read_from_file(path:str):
+    def read_from_file(self, path: str):
         """
         Read an audio file already stored in the FS.
         :param path: is a string representing the path where the audio is stored in.
         :return: the audio data and the related sample rate.
         """
         data, fs = sf.read(path, dtype='float32')
-        return data,fs
+        return data, fs
 
-    def set_sample_rate(sm:int):
+    def set_sample_rate(self, sm: int):
         """
         Set the sample rate for recording.
         :param sm: is the frequency sampling (sampling rate) of the captured audio expressed as an integer.
