@@ -2,12 +2,14 @@
 This file contains the Hill Myna backend source code, which is directly called by the GUI.
 """
 from azure import Credentials, CredentialsManager, SpeechToTextClient, IdentificationClient
+from words import WordManager
+from typing import List
 
 
 class HillMyna:
 
     def __init__(self, data_directory: str, tmp_directory: str,
-                 credentials_fn: str = "credentials.csv",
+                 credentials_fn: str = "credentials.csv", words_fn: str = "words.txt",
                  speech_resource: str = "SpeechBS2019", identification_resource: str = "SpeakerBS2019",
                  operation_check_time: int = 30, remove_silences: bool = False,
                  debug: bool = False):
@@ -16,6 +18,7 @@ class HillMyna:
         :param data_directory: Path to a directory containing all the data needed to run the program
         :param tmp_directory: Path to a directory where to store temporary files (i.e. audio files)
         :param credentials_fn: Name of the file containing resource names, API keys, and REST endpoints
+        :param words_fn: Name of the file containing words for anti-spoofing reasons
         :param speech_resource: Name of the Azure resource to be used for speech-to-text
         :param identification_resource: Name of the Azure resource to be used for speaker identification
         :param operation_check_time: Time (in seconds) to wait before querying Azure for operation result; can be tweaked to reduce API limits consume
@@ -34,6 +37,12 @@ class HillMyna:
                                                                                    filename=credentials_fn))
 
         if self.__debug:
+            print("Loading words file...")
+        self.__words_manager = WordManager(words_path="{base}/{filename}".format(base=data_directory,
+                                                                                 filename=words_fn),
+                                           debug=self.__debug)
+
+        if self.__debug:
             print("Initializing speech-to-text client...")
         creds = self.__credentials_manager.get(speech_resource)
         self.__SpeechClient = SpeechToTextClient(credentials=creds, debug=self.__debug)
@@ -49,8 +58,28 @@ class HillMyna:
 
     # --- Logging in ---
     # word fetching, speech-to-text operations, identification operations
+    def get_words(self) -> List[str]:
+        words = self.__words_manager.get_words()
+        return words
+
+    def speech_to_text(self, audio_path: str):
+        pass
     # --- --- ---
 
     # --- Benchmarks ---
     # threshold tuning, spoofing attacks
     # --- --- ---
+
+
+if __name__ == "__main__":
+    # rec audio or not
+    RECORD_AUDIO = True
+
+    if RECORD_AUDIO:
+        # do the recording and get the path
+        audio_path = "path/to/audio"
+        pass
+
+    # Azure speech-to-text stuff
+    # ...
+    pass
