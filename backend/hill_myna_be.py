@@ -62,12 +62,51 @@ class HillMyna:
     # --- Logging in ---
     # word fetching, speech-to-text operations, identification operations
     def get_words(self) -> List[str]:
+        """
+        Returns a list of randomly chosen words, containing no duplicates.
+        :return: No-duplicate list of randomly chosen words
+        """
+
         words = self.__words_manager.get_words()
         return words
 
-    def speech_to_text(self, audio_path: str):
-        json_response = self.__SpeechClient.recognize(audio_path=audio_path, detailed=True)
-        print(json_response)
+    def speech_to_text(self, audio_path: str, detailed: bool = False) -> List[str]:
+        """
+        Returns a list of words recognized in the given audio file.
+        :param audio_path: Path to the audio file
+        :param detailed: if True, retrieves the detailed version of the Azure response
+        :return: List of recognized words
+        """
+
+        ret = None
+
+        json_response = self.__SpeechClient.recognize(audio_path=audio_path, detailed=detailed)
+        if self.__debug:
+            print(json_response)
+
+        # retrieve Azure status
+        status = json_response["RecognitionStatus"]
+        if status == "Success":
+            # retrieve recognized words as a string
+            ret = json_response["NBest"][0]["Lexical"] if detailed else json_response["DisplayText"]
+            ret = ret.lower().strip(".")
+
+            # split the string by whitespace
+            ret = ret.split(" ")
+
+        elif status == "NoMatch":
+            raise RuntimeError("No English word could be recognized in your recording.")
+
+        elif status == "InitialSilenceTimeout":
+            raise RuntimeError("Too much silence in the start of your recording.")
+
+        elif status == "BabbleTimeout":
+            raise RuntimeError("Too much noise in the start of your recording.")
+
+        elif status == "Error":
+            raise RuntimeError("Microsoft Azure internal error.")
+
+        return ret
     # --- --- ---
 
     # --- Benchmarks ---
