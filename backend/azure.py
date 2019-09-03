@@ -3,9 +3,7 @@ This file contains source code for every Microsoft Azure interaction involved in
 """
 from rest_client import RESTClient, SimpleResponse
 from collections import namedtuple
-from datetime import datetime
 from typing import List
-import time
 import os.path
 import json
 
@@ -82,36 +80,8 @@ class SpeechToTextClient:
         self.credentials = credentials
         self.__debug = debug
 
-        # Azure token to perform SpeechToText API requests, additionally to credentials
-        self.token = None
-
-        # used to computed token timeout, as its validity lasts 10 minutes
-        self.token_timestamp = None
-
         # REST client to be used for all Azure requests
         self.client = RESTClient(debug=self.__debug)
-
-    def __authenticate(self) -> None:
-        """
-        Performs Azure authentication, retrieving a service token for subsequent requests.
-        ATTENTION: currently disabled, service key MIGHT be enough.
-        :return: None
-        """
-
-        trailing_url = "sts/v1.0/issueToken"
-        headers = {"Ocp-Apim-Subscription-Key": self.credentials.key}
-        service_url = "{endpoint}{trailer}".format(endpoint=self.credentials.endpoint,
-                                                   trailer=trailing_url)
-
-        response = self.client.post(url=service_url,
-                                    headers=headers,
-                                    expect_json=False)
-
-        if response.code != 200:
-            raise RuntimeError("Authentication failed: POST responded with {code} {msg}".format(code=response.code,
-                                                                                                msg=response.message))
-        self.token = response.content
-        self.token_timestamp = time.mktime(datetime.utcnow().timetuple())
 
     def recognize(self, audio_path: str, detailed: bool = False) -> json:
         """
@@ -126,14 +96,8 @@ class SpeechToTextClient:
         if not os.path.isfile(audio_path):
             raise FileNotFoundError("{file} must be a regular file.".format(file=audio_path))
 
-        # check for token validity; authenticate if token is expired or about to
-        #right_now = time.mktime(datetime.utcnow().timetuple())
-        #if (self.token is None) or (9 < (right_now - self.token_timestamp) / 60):
-        #    self.__authenticate()
-
         trailing_url = "speech/recognition/conversation/cognitiveservices/v1"
         headers = {"Ocp-Apim-Subscription-Key": self.credentials.key,
-                   #"Authorization": "Bearer {token}".format(token=self.token),
                    "Content-type": "audio/wav; codecs=audio/pcm; samplerate=16000",
                    "Accept": "application/json"}
         parameters = {"language": "en-US",
@@ -399,16 +363,4 @@ class IdentificationClient:
 
 
 if __name__ == "__main__":
-    a = datetime.utcnow()
-    print(a)
-    a = time.mktime(a.timetuple())
-    print(a)
-
-    time.sleep(65)
-
-    b = datetime.utcnow()
-    print(b)
-    b = time.mktime(b.timetuple())
-    print(b)
-
-    print((b-a)/60)
+    pass
