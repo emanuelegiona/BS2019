@@ -113,10 +113,11 @@ class SpeechToTextClient:
         self.token = response.content
         self.token_timestamp = time.mktime(datetime.utcnow().timetuple())
 
-    def recognize(self, audio_path: str) -> json:
+    def recognize(self, audio_path: str, detailed: bool = False) -> json:
         """
         Recognizes text from a given audio file.
         :param audio_path: Path to the audio file
+        :param detailed: if True, retrieves the detailed version of the Azure response
         :return: JSON object containing recognized text and other stats
         """
 
@@ -136,7 +137,7 @@ class SpeechToTextClient:
                    "Content-type": "audio/wav; codecs=audio/pcm; samplerate=16000",
                    "Accept": "application/json"}
         parameters = {"language": "en-US",
-                      "format": "simple"}   # detailed also returns confidence score
+                      "format": "detailed" if detailed else "simple"}   # detailed also returns confidence score
 
         service_url = "{endpoint}{trailer}".format(endpoint=self.credentials.endpoint,
                                                    trailer=trailing_url)
