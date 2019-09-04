@@ -24,30 +24,32 @@ data, fs = sf.read(path, dtype='float32') #to read an already existing audio sam
 sd.play(data, fs)
 sd.wait()
 """
-
 sd.default.samplerate = 16000
 
 
-class audio:
+class Audio:
 
-    def __init__(self):
-        pass
+    def __init__(self, path: str = None, blocking: bool = False):
+        self.path = path
+        self.audio = None
+        self.block = blocking
 
-    def rec(self, duration: float, fs: int = sd.default.samplerate, path: str = None, block: bool = False):
+    def rec(self, duration: float, fs: int = sd.default.samplerate):
         """
-        Records and returns an audio sample from default device. If path is not None, the sample will be locally stored to path.
+        Records and returns an audio sample from default device. If path is not None, the sample will be locally stored
+        to path.
         :param duration: is an integer that indicates how many seconds of recording will be performed.
-        :param fs: is the frequency sampling (sampling rate) of the captured audio expressed as an integer.
-        :param path: is a string representing the path where the audio will be stored in.
-        :param block: is a boolean. If it's true won't be possible to launch other commands during recording, yes otherwise.
+        :param fs: is the frequency sampling (sampling rate) of the captured audio expressed as an integer
+        otherwise.
         :return: the recorded audio.
         """
         print("Start Recording")
-        myrecording = sd.rec(int(duration * fs), samplerate=fs, channels=1, blocking=block) #recorded audio as a NumPy array
-        print("End Recording")
-        if path is not None:
-            sf.write(path, myrecording, fs)
-        return myrecording
+        # recorded audio as a NumPy array
+        self.audio = sd.rec(int(duration * fs), samplerate=fs, channels=1, blocking=self.block)
+        if self.path is not None and self.block is True:
+            print("End Recording")
+            sf.write(self.path, self.audio, fs)
+        return self.audio
 
     def read_from_file(self, path: str):
         """
@@ -63,7 +65,7 @@ class audio:
         Set the sample rate for recording.
         :param sm: is the frequency sampling (sampling rate) of the captured audio expressed as an integer.
         """
-        sd.default.samplerate=sm
+        sd.default.samplerate = sm
 
     def get_sample_rate(self):
         """
@@ -71,3 +73,27 @@ class audio:
         :return the frequency sampling (sampling rate) of the captured audio expressed as an integer.
         """
         return sd.default.samplerate
+
+    def stop(self):
+        """
+        Stops a non blocking rec() during an audio acquisition. The registration is immediately terminated without
+        waiting for the timeout expressed by the duration argument of rec.
+        """
+        sd.stop()
+        if self.path is not None:
+            print("End Recording")
+            sf.write(self.path, self.audio, self.get_sample_rate())
+
+    def wait(self):
+        """
+        If the recording was already finished, this returns immediately; if not, it waits and returns as soon as the
+        recording is finished.
+        :return: a flag indicating the status of recording.
+        """
+        return sd.wait()
+
+
+if __name__ == "__main__":
+    a = Audio(path="ok.wav")
+    b = a.rec(duration=6.0)
+    sd.play(b, 16000)
