@@ -70,7 +70,7 @@ class UsersManager:
             self.AzId.pop(id)
         else : raise KeyError("The user that should be eliminated does not exist")
 
-    def add(self, person) -> None:
+    def add(self, person) -> None:              # TODO creazione utente direttamente nel metodo add, piuttosto che lasciar creare al backend un oggetto JSON da passare
         """
         Adds a user into a dictionary:
         :param person: User object to add in the database
@@ -79,9 +79,9 @@ class UsersManager:
         values = person.copy()
         values.pop("AzureId")
         key = person.x("AzureId")
-        self.AzId.update(key, values)           # TODO v. riga 58
+        self.AzId.update(key, values)           # TODO v. riga 58 - ATTENZIONE consistenza: username deve essere univoco, suggerimento return bool o lanci eccezione in caso di conflitto
 
-    def getAz(self, azureId) -> Info:
+    def getAz(self, azureId) -> Info:           # TODO preferibile nomi estesi ed uniti da underscore
         """
         Returns every information about a user stored in the database
         :param azureId: contains the Id of a user in order to search for its informations

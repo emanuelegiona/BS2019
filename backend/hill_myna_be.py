@@ -5,6 +5,7 @@ from azure import Credentials, CredentialsManager, SpeechToTextClient, Identific
 from words import WordManager
 from typing import List
 from audio import Audio
+from users import User, UsersManager
 from datetime import datetime
 import time
 
@@ -12,7 +13,7 @@ import time
 class HillMyna:
 
     def __init__(self, data_directory: str, tmp_directory: str,
-                 credentials_fn: str = "credentials.csv", words_fn: str = "words.txt",
+                 credentials_fn: str = "credentials.csv", words_fn: str = "words.txt", users_fn: str = "users.txt",
                  speech_resource: str = "SpeechBS2019", identification_resource: str = "SpeakerBS2019",
                  operation_check_time: int = 30, remove_silences: bool = False,
                  debug: bool = False):
@@ -22,6 +23,7 @@ class HillMyna:
         :param tmp_directory: Path to a directory where to store temporary files (i.e. audio files)
         :param credentials_fn: Name of the file containing resource names, API keys, and REST endpoints
         :param words_fn: Name of the file containing words for anti-spoofing reasons
+        :param users_fn: Name of the file containing HillMyna users
         :param speech_resource: Name of the Azure resource to be used for speech-to-text
         :param identification_resource: Name of the Azure resource to be used for speaker identification
         :param operation_check_time: Time (in seconds) to wait before querying Azure for operation result; can be tweaked to reduce API limits consume
@@ -44,6 +46,11 @@ class HillMyna:
         self.__words_manager = WordManager(words_path="{base}/{filename}".format(base=data_directory,
                                                                                  filename=words_fn),
                                            debug=self.__debug)
+
+        if self.__debug:
+            print("Loading users file...")
+        self.__users_manager = UsersManager(users_path="{base}/{filename}".format(base=data_directory,
+                                                                                  filename=users_fn))
 
         if self.__debug:
             print("Initializing speech-to-text client...")
@@ -129,7 +136,8 @@ class HillMyna:
         assert surname is not None, "Surname must be provided."
 
         azure_id = self.__SpeakerClient.new_profile()
-        # TODO user management: add user profile
+        # user management: add user profile
+        self.__users_manager.add(person=None)   # TODO unclear: relazione con azure_id
 
     def delete_profile(self, username: str = None, azure_id: str = None) -> None:
         """
@@ -144,12 +152,16 @@ class HillMyna:
 
         if username is not None and azure_id is not None:
             # TODO user management: check username and azure_id refer to the same user profile
+            # will do
             pass
 
-        # TODO user management: find azure_id if only username is provided
+        # user management: find azure_id if only username is provided
+        elif username is not None:
+            azure_id = self.__users_manager.getId(username=username).AzureId        # TODO Info/User merge
+
         if self.__SpeakerClient.del_profile(profile_id=azure_id):
-            # TODO user management: delete user profile
-            pass
+            # user management: delete user profile
+            self.__users_manager.remove(id=azure_id)
 
     def enrollment(self, audio_path: str, username: str = None, azure_id: str = None, short_audio: bool = False) -> str:
         """
@@ -166,9 +178,13 @@ class HillMyna:
 
         if username is not None and azure_id is not None:
             # TODO user management: check username and azure_id refer to the same user profile
+            # will do
             pass
 
-        # TODO user management: find azure_id if only username is provided
+        # user management: find azure_id if only username is provided
+        elif username is not None:
+            azure_id = self.__users_manager.getId(username=username).AzureId  # TODO Info/User merge
+
         url = self.__SpeakerClient.new_enrollment(profile_id=azure_id,
                                                   audio_path=audio_path,
                                                   short_audio=short_audio)
