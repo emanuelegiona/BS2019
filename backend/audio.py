@@ -3,6 +3,9 @@ This file contains source code for all the audio processing involved in this pro
 """
 import sounddevice as sd
 import soundfile as sf
+import os
+import time
+from pydub import AudioSegment
 """
 useful libraries for eventual implementation of silence removal:
 
@@ -30,7 +33,13 @@ sd.default.samplerate = 16000
 class Audio:
 
     def __init__(self, path: str = None, blocking: bool = False):
+        """
+        :param path: the path where the audio will be stored in.
+        :param blocking: a flag that indicates if the recording will be blocking or not.
+        """
         self.path = path
+        self.start = None
+        self.end = None
         self.audio = None
         self.block = blocking
 
@@ -41,23 +50,22 @@ class Audio:
         :param duration: is an integer that indicates how many seconds of recording will be performed.
         :param fs: is the frequency sampling (sampling rate) of the captured audio expressed as an integer
         otherwise.
-        :return: the recorded audio.
         """
         print("Start Recording")
+        self.start = time.time()
         # recorded audio as a NumPy array
         self.audio = sd.rec(int(duration * fs), samplerate=fs, channels=1, blocking=self.block)
         if self.path is not None and self.block is True:
+            self.end = time.time()
             print("End Recording")
-            sf.write(self.path, self.audio, fs)
-        return self.audio
+            sf.write("../tmp/{file}".format(file=self.path), self.audio, fs)
 
-    def read_from_file(self, path: str):
+    def read_from_file(self):
         """
-        Read an audio file already stored in the FS.
-        :param path: is a string representing the path where the audio is stored in.
-        :return: the audio data and the related sample rate.
+        Read the audio file stored in the FS.
+        :return: the audio data (as a Numpy array) and the related sample rate (as an integer).
         """
-        data, fs = sf.read(path, dtype='float32')
+        data, fs = sf.read("../tmp/{file}".format(file=self.path), dtype='float32')
         return data, fs
 
     def set_sample_rate(self, sm: int):
@@ -82,7 +90,13 @@ class Audio:
         sd.stop()
         if self.path is not None:
             print("End Recording")
-            sf.write(self.path, self.audio, self.get_sample_rate())
+            self.end = time.time()
+            sf.write("../tmp/{file}".format(file=self.path), self.audio, self.get_sample_rate())
+            duration = self.get_real_duration() * 1000
+            audio = AudioSegment.from_wav("../tmp/{file}".format(file=self.path))[:duration]
+            self.delete()
+            audio.export("../tmp/{file}".format(file=self.path), format="wav")
+            self.audio, fs = self.read_from_file()
 
     def wait(self):
         """
@@ -92,8 +106,28 @@ class Audio:
         """
         return sd.wait()
 
+    def delete(self):
+        """
+        Delete the recorded audio from FS.
+        """
+        if self.start is not None:
+            os.remove("../tmp/{file}".format(file=self.path))
+        else:
+            raise FileNotFoundError("{file} not found.".format(file=self.path))
+
+    def get_real_duration(self):
+        """
+        In case of non-blocking audio this method returns the real duration of the audio, removing eventual final
+        silences.
+        :return: an integer indicating the real audio duration.
+        """
+        return self.end - self.start
+
 
 if __name__ == "__main__":
-    a = Audio(path="ok.wav")
-    b = a.rec(duration=6.0)
-    sd.play(b, 16000)
+    a = Audio("franco.wav")
+    a.rec(60)
+    time.sleep(5)
+    a.stop()
+    data, fs= sf.read("/tmp/franco.wav")
+    sd.play(data,fs)

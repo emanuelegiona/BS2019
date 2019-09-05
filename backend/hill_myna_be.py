@@ -243,9 +243,11 @@ if __name__ == "__main__":
     a = datetime.utcnow()
     ts = time.mktime(a.timetuple())
     audio_path = "../tmp/audio{timestamp}.wav".format(timestamp=ts)
-    a = Audio(path=audio_path, blocking=True)
-    a.rec(duration=6)
-
+    a = Audio(path=audio_path)
+    a.rec(duration=60)
+    time.sleep(10)
+    a.stop()
     # Azure speech-to-text stuff
     h.speech_to_text(audio_path)
+    a.delete()
     # --- --- ---
