@@ -8,4 +8,5 @@ pip:
 	@echo "\nInstalling Python packages using PIP\n"
 	pip install soundfile
 	pip install sounddevice
+	pip install pydub
 	pip install requests
