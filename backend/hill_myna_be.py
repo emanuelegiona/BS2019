@@ -4,7 +4,7 @@ This file contains the Hill Myna backend source code, which is directly called b
 from azure import Credentials, CredentialsManager, SpeechToTextClient, IdentificationClient
 from words import WordManager
 from typing import List
-from audio import audio
+from audio import Audio
 from datetime import datetime
 import time
 
@@ -243,9 +243,11 @@ if __name__ == "__main__":
     a = datetime.utcnow()
     ts = time.mktime(a.timetuple())
     audio_path = "../tmp/audio{timestamp}.wav".format(timestamp=ts)
-    a = audio()
-    a.rec(duration=6, path=audio_path, block=True)
-
+    a = Audio(path=audio_path)
+    a.rec(duration=60)
+    time.sleep(10)
+    a.stop()
     # Azure speech-to-text stuff
     h.speech_to_text(audio_path)
+    a.delete()
     # --- --- ---
