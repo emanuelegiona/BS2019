@@ -10,3 +10,4 @@ pip:
 	pip install sounddevice
 	pip install pydub
 	pip install requests
+	pip install appjar
