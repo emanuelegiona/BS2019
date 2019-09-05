@@ -45,7 +45,7 @@ class UsersManager:
         # self.UsId: {} : add if in need of a second dictionary
 
         self.AzId = {}                      # TODO lo renderei un dict con chiavi str e valori Info/User (dopo l'unione dei concetti in namedtuple)
-        if not os.path.exists(users_path):
+        if not os.path.exists(users_path):  # TODO se il file non esite, lo crea vuoto invece che lanciare l'eccezione - al primo avvio bisogna comunque essere in grado di avviare HillMyna
             raise FileNotFoundError("{file} not found.".format(file=users_path))
         if not os.path.isfile(users_path):
             raise FileNotFoundError("{file} must be a regular file.".format(file=users_path))

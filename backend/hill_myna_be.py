@@ -35,6 +35,7 @@ class HillMyna:
         assert tmp_directory is not None, "Temporary file directory must be provided"
 
         self.__debug = debug
+        self.tmp_directory = tmp_directory
 
         if self.__debug:
             print("Loading credentials file...")
