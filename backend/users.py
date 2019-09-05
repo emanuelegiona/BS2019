@@ -1,4 +1,4 @@
-"""op
+"""
 This file contains all the source code needed to handle and query user profiles involved with the identification task.
 """
 
@@ -9,8 +9,8 @@ import time
 import os.path
 import json
 
-
-Info = namedtuple("AzureId", "User")
+# TODO avrei unito Info e User in un unico concetto (come namedtuple)
+Info = namedtuple("AzureId", "User")        # TODO Info = namedtuple("Info", "AzureId User") ti crea un simil-oggetto con campi "AzureId" ed "User"
 
 
 class User:
@@ -44,7 +44,7 @@ class UsersManager:
 
         # self.UsId: {} : add if in need of a second dictionary
 
-        self.AzId = {}
+        self.AzId = {}                      # TODO lo renderei un dict con chiavi str e valori Info/User (dopo l'unione dei concetti in namedtuple)
         if not os.path.exists(users_path):
             raise FileNotFoundError("{file} not found.".format(file=users_path))
         if not os.path.isfile(users_path):
@@ -55,7 +55,7 @@ class UsersManager:
         with open(users_path, "r") as read_file:
             users= json.load(read_file)
             for user in users:
-                self.AzId.add(user)
+                self.AzId.add(user)         # TODO dict non ha metodo add, lo aggiungi semplicemente AzId["nuova chiave"] = "nuovo valore"
 
                 #add(user, UsId)
 
@@ -79,7 +79,7 @@ class UsersManager:
         values = person.copy()
         values.pop("AzureId")
         key = person.x("AzureId")
-        self.AzId.update(key, values)
+        self.AzId.update(key, values)           # TODO v. riga 58
 
     def getAz(self, azureId) -> Info:
         """
@@ -89,11 +89,11 @@ class UsersManager:
         """
         if azureId in self.AzId:
             info = {}
-            info.update("azureId", azureId)
+            info.update("azureId", azureId)     # TODO v. riga 58
             aux = (self.AzId.get(azureId)).copy
             for x in aux :
-                info.update(x , aux.get(x))
-            return info
+                info.update(x , aux.get(x))     # TODO v. riga 58
+            return info                         # TODO type mismatch: returned dict invece di Info
         else : raise KeyError("The requested user does not exist in the db. Pls retry with an existent one")
 
     def getId(self, username) -> Info:
@@ -102,12 +102,12 @@ class UsersManager:
         :param username: contains the username of a user in order to search for its informations
         :return : Returns a dictionary containing every information of a certain user
         """
-        for id in self.AzId :
+        for id in self.AzId :       # TODO iterazione più semplice con "for id, value in self.AzId.values()" - visto che spacchetta le chiavi e valori unitamente dal dizionario
             if username == (self.AzId.get(id)).get("Name"):
                 aux = self.AzId.get(id)
                 y = aux["azure_id"]
                 x = User(id, aux["username"], aux["name"], aux["surname"], aux["status"] )
-                info = Info(y , x)
+                info = Info(y , x)  # TODO Info ha solo 1 campo (v. riga 13)
                 return info
         raise KeyError("No user with such username exists. please retry with an existing one")
 

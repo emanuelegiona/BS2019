@@ -34,7 +34,7 @@ class Audio:
 
     def __init__(self, path: str = None, blocking: bool = False):
         """
-        :param path: the path where the audio will be stored in.
+        :param path: the path where the audio will be stored in.    # TODO full path ?
         :param blocking: a flag that indicates if the recording will be blocking or not.
         """
         self.path = path
@@ -58,14 +58,14 @@ class Audio:
         if self.path is not None and self.block is True:
             self.end = time.time()
             print("End Recording")
-            sf.write("../tmp/{file}".format(file=self.path), self.audio, fs)
+            sf.write("../tmp/{file}".format(file=self.path), self.audio, fs)        # TODO v. riga 37
 
     def read_from_file(self):
         """
         Read the audio file stored in the FS.
         :return: the audio data (as a Numpy array) and the related sample rate (as an integer).
         """
-        data, fs = sf.read("../tmp/{file}".format(file=self.path), dtype='float32')
+        data, fs = sf.read("../tmp/{file}".format(file=self.path), dtype='float32')     # TODO v. riga 37
         return data, fs
 
     def set_sample_rate(self, sm: int):
@@ -91,11 +91,11 @@ class Audio:
         if self.path is not None:
             print("End Recording")
             self.end = time.time()
-            sf.write("../tmp/{file}".format(file=self.path), self.audio, self.get_sample_rate())
+            sf.write("../tmp/{file}".format(file=self.path), self.audio, self.get_sample_rate())    # TODO v. riga 37
             duration = self.get_real_duration() * 1000
-            audio = AudioSegment.from_wav("../tmp/{file}".format(file=self.path))[:duration]
+            audio = AudioSegment.from_wav("../tmp/{file}".format(file=self.path))[:duration]        # TODO v. riga 37
             self.delete()
-            audio.export("../tmp/{file}".format(file=self.path), format="wav")
+            audio.export("../tmp/{file}".format(file=self.path), format="wav")                      # TODO v. riga 37
             self.audio, fs = self.read_from_file()
 
     def wait(self):
@@ -111,9 +111,9 @@ class Audio:
         Delete the recorded audio from FS.
         """
         if self.start is not None:
-            os.remove("../tmp/{file}".format(file=self.path))
+            os.remove("../tmp/{file}".format(file=self.path))                       # TODO v. riga 37
         else:
-            raise FileNotFoundError("{file} not found.".format(file=self.path))
+            raise FileNotFoundError("{file} not found.".format(file=self.path))     # TODO v. riga 37
 
     def get_real_duration(self):
         """
