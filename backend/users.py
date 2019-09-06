@@ -8,26 +8,7 @@ from typing import List
 import time
 import os.path
 import json
-
-# TODO avrei unito Info e User in un unico concetto (come namedtuple)
-Info = namedtuple("AzureId", "User")        # TODO Info = namedtuple("Info", "AzureId User") ti crea un simil-oggetto con campi "AzureId" ed "User"
-
-
-class User:
-
-    def __init__(self, azure_id: str, username: str, name: str, surname: str, status: bool):
-        person = {"azure_id": azure_id,
-                  "username": username,
-                  "name": name,
-                  "surname": surname,
-                  "status": status}
-
-
-def getUser(self, id: str) -> dict:
-    if id == self.person["azure_id"]:
-        return self.person
-    else:
-        raise KeyError("The user searched is not this one. please retry")
+User = namedtuple("User", "azure_id username name surname status")
 
 class UsersManager:
 
@@ -40,76 +21,100 @@ class UsersManager:
         :param users_path: Path to the users file
         """
 
-        # Creation of a dictionary for future use
-
+        # Creation of a dictionary for future use, feach entry formed by a string and a User
         # self.UsId: {} : add if in need of a second dictionary
 
-        self.AzId = {}                      # TODO lo renderei un dict con chiavi str e valori Info/User (dopo l'unione dei concetti in namedtuple)
-        if not os.path.exists(users_path):  # TODO se il file non esite, lo crea vuoto invece che lanciare l'eccezione - al primo avvio bisogna comunque essere in grado di avviare HillMyna
-            raise FileNotFoundError("{file} not found.".format(file=users_path))
+        self.AzId = {}
+
+        # creates an empty json if there is no json
+        if not os.path.exists(users_path):
+            with open(users_path, 'w') as datb:
+                json.dump([], datb)
         if not os.path.isfile(users_path):
             raise FileNotFoundError("{file} must be a regular file.".format(file=users_path))
 
 
-        #read from json file and AzId fill
+        # read from json file and AzId fill
+
         with open(users_path, "r") as read_file:
             users= json.load(read_file)
             for user in users:
-                self.AzId.add(user)         # TODO dict non ha metodo add, lo aggiungi semplicemente AzId["nuova chiave"] = "nuovo valore"
+                person = User(user, user["username"], user["name"], user["surname"], user["status"])
+                self.AzId[user] = person
 
-                #add(user, UsId)
-
-    def remove (self, id : str) -> None:
+    def remove (self, identifier : str) -> None:
 
         """
         Removes a user from the dictionary
-        :param id: String containing the azure_id to remove
+        :param identifier: String containing the azure_id to remove
         :return: None
         """
-        if id in self.AzId:
-            self.AzId.pop(id)
+        if identifier in self.AzId:
+            self.AzId.pop(identifier)
         else : raise KeyError("The user that should be eliminated does not exist")
 
-    def add(self, person) -> None:              # TODO creazione utente direttamente nel metodo add, piuttosto che lasciar creare al backend un oggetto JSON da passare
+    def add(self, azure_id : str, username: str, name : str, surname : str, status : bool) -> None:
         """
         Adds a user into a dictionary:
-        :param person: User object to add in the database
+        :param azure_id: Azure id of the new user
+        :param username: new user's username
+        :param name: name of the user
+        :param surname: new user's surname
+        :param status: status of the user
         :return: none
         """
-        values = person.copy()
-        values.pop("AzureId")
-        key = person.x("AzureId")
-        self.AzId.update(key, values)           # TODO v. riga 58 - ATTENZIONE consistenza: username deve essere univoco, suggerimento return bool o lanci eccezione in caso di conflitto
+        if azure_id in self.AzId:
+            raise KeyError("Azure_id already existing, insert a new one in order to register the new user")
+        for x in self.AzId:
+            if username in self.AzId["username"]:
+                raise KeyError("Username already taken, please choose one that has not been chosen")
 
-    def getAz(self, azureId) -> Info:           # TODO preferibile nomi estesi ed uniti da underscore
+        person = User(azure_id, username, name, surname, status)
+        self.AzId[azure_id] = person
+
+    def get_Azure_Id(self, azure_id) -> User:
         """
         Returns every information about a user stored in the database
         :param azureId: contains the Id of a user in order to search for its informations
         :return: Returns a dictionary containing every information of a certain user
         """
-        if azureId in self.AzId:
-            info = {}
-            info.update("azureId", azureId)     # TODO v. riga 58
-            aux = (self.AzId.get(azureId)).copy
-            for x in aux :
-                info.update(x , aux.get(x))     # TODO v. riga 58
-            return info                         # TODO type mismatch: returned dict invece di Info
+        if azure_id in self.AzId:
+            return User(self.AzId.get(azure_id).azure_id, self.AzId.get(azure_id).username, self.AzId.get(azure_id).name
+                        , self.AzId.get(azure_id).surname,self.AzId.get(azure_id).status)
         else : raise KeyError("The requested user does not exist in the db. Pls retry with an existent one")
 
-    def getId(self, username) -> Info:
+    def get_Username(self, username) -> User:
         """
         Returns every information about a user stored in the database
         :param username: contains the username of a user in order to search for its informations
         :return : Returns a dictionary containing every information of a certain user
         """
-        for id in self.AzId :       # TODO iterazione più semplice con "for id, value in self.AzId.values()" - visto che spacchetta le chiavi e valori unitamente dal dizionario
-            if username == (self.AzId.get(id)).get("Name"):
-                aux = self.AzId.get(id)
-                y = aux["azure_id"]
-                x = User(id, aux["username"], aux["name"], aux["surname"], aux["status"] )
-                info = Info(y , x)  # TODO Info ha solo 1 campo (v. riga 13)
-                return info
+        for id, value in self.AzId.values() :
+            if username == self.AzId.get(id).username:
+                return self.get_Azure_Id(self.AzId.get(id).azure_id)
         raise KeyError("No user with such username exists. please retry with an existing one")
+
+    def ten_Users_List (self) -> List:
+        """
+        The function returns a list of lists, containing each one at most 1o Users.
+        :return: A list of lists, each one containing at most 10 Users
+        """
+        x, y = 0
+        bunch = []
+        aux = []
+        # for cycles AzId and takes every user, dividing them in groups of 10 users at most
+        for user in self.AzId:
+            if y >= 10:
+                bunch.append(aux.copy())
+                y = 0
+            person = self.AzId.get(user)
+            aux.append(person.copy())
+            x = x + 1
+        return list
+
+
+
+
 
 
 
