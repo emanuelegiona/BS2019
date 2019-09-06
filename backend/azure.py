@@ -150,15 +150,14 @@ class IdentificationClient:
                    "Content-Type": "application/json"}
         service_url = "{endpoint}{trailer}".format(endpoint=self.credentials.endpoint,
                                                    trailer=trailing_url)
-        body = {"locale": "en-US"}
-        body = json.dumps(body)
+        body = {"locale":"en-US"}
+        #body = json.dumps(body)
 
         response = self.client.post(url=service_url,
                                     headers=headers,
                                     body=body)
-
         if response.code != 200:
-            msg = response.content["message"]
+            msg = response.content["error"]["message"]
             raise RuntimeError("New profile failed: POST responded with {code} {msg}".format(code=response.code,
                                                                                              msg=msg))
 
@@ -184,7 +183,7 @@ class IdentificationClient:
                                       headers=headers)
 
         if response.code != 200:
-            msg = response.content["message"]
+            msg = response.content["error"]["message"]
             raise RuntimeError("Delete profile failed: POST responded with {code} {msg}".format(code=response.code,
                                                                                                 msg=msg))
 
@@ -216,10 +215,11 @@ class IdentificationClient:
                                         headers=headers,
                                         params=parameters,
                                         data=file,
-                                        response_headers=True)
+                                        response_headers=True,
+                                        expect_json=False)
 
         if response.code != 202:
-            msg = response.content["message"]
+            msg = response.content["error"]["message"]
             raise RuntimeError("Enrollment failed: POST responded with {code} {msg}".format(code=response.code,
                                                                                             msg=msg))
 
@@ -245,7 +245,7 @@ class IdentificationClient:
                                     headers=headers)
 
         if response.code != 200:
-            msg = response.content["message"]
+            msg = response.content["error"]["message"]
             raise RuntimeError("Reset enrollments failed: POST responded with {code} {msg}".format(code=response.code,
                                                                                                    msg=msg))
 
@@ -267,7 +267,7 @@ class IdentificationClient:
                                    headers=headers)
 
         if response.code != 200:
-            msg = response.content["message"]
+            msg = response.content["error"]["message"]
             raise RuntimeError("Get profile failed: POST responded with {code} {msg}".format(code=response.code,
                                                                                              msg=msg))
 
@@ -288,7 +288,7 @@ class IdentificationClient:
                                    headers=headers)
 
         if response.code != 200:
-            msg = response.content["message"]
+            msg = response.content["error"]["message"]
             raise RuntimeError("Get all profiles failed: POST responded with {code} {msg}".format(code=response.code,
                                                                                                   msg=msg))
 
@@ -328,8 +328,8 @@ class IdentificationClient:
                                         data=file,
                                         response_headers=True)
 
-        if response.code != 202:
-            msg = response.content["message"]
+        if response.code != 200:
+            msg = response.content["error"]["message"]
             raise RuntimeError("Enrolment failed: POST responded with {code} {msg}".format(code=response.code,
                                                                                            msg=msg))
 
@@ -353,9 +353,8 @@ class IdentificationClient:
 
         response = self.client.get(url=service_url,
                                    headers=headers)
-
         if response.code != 200:
-            msg = response.content["message"]
+            msg = response.content["error"]["message"]
             raise RuntimeError("Get operation status failed: POST responded with {code} {msg}".format(code=response.code,
                                                                                                       msg=msg))
 

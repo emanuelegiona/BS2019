@@ -241,30 +241,28 @@ class HillMyna:
             raise RuntimeError("Microsoft Azure internal error.")
 
         return ret
-    # --- --- ---
 
-    # --- Benchmarks ---
-    # threshold tuning, spoofing attacks
-    # --- --- ---
+    def test(self):
+        h = HillMyna(data_directory="../data", tmp_directory="../tmp", debug=True)
+
+        # random pick words
+        h.get_words()
+        # do the recording and get the path
+        a = datetime.utcnow()
+        ts = time.mktime(a.timetuple())
+        audio_path = "../tmp/audio{timestamp}.wav".format(timestamp=ts)
+        a = Audio(path=audio_path, blocking=True)
+        a.rec(duration=6)
+        IDclient = IdentificationClient(h.__credentials_manager.get("SpeakerBS2019"))
+        profileID = IDclient.new_profile()
+        status_url = IDclient.new_enrollment(profileID, audio_path)
+        print("PROFILE:  "+profileID)
+        print("STATUS:   "+str(status_url))
+        a.delete()
+        #print(IDclient.operation_status(status_URL))#RuntimeError: Get operation status failed: POST responded with 404 Resource not found
+        #print(IDclient.get_profile(status_URL)) #RuntimeError: Get profile failed: POST responded with 404 Resource not found
 
 
 if __name__ == "__main__":
-    h = HillMyna(data_directory="../data",
-                 tmp_directory="../tmp",
-                 debug=True)
-
-    # random pick words
-    h.get_words()
-
-    # do the recording and get the path
-    a = datetime.utcnow()
-    ts = time.mktime(a.timetuple())
-    audio_path = "../tmp/audio{timestamp}.wav".format(timestamp=ts)
-    a = Audio(path=audio_path)
-    a.rec(duration=60)
-    time.sleep(10)
-    a.stop()
-    # Azure speech-to-text stuff
-    h.speech_to_text(audio_path)
-    a.delete()
-    # --- --- ---
+    h = HillMyna(data_directory="../data", tmp_directory="../tmp")
+    h.test()

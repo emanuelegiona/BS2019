@@ -34,7 +34,7 @@ class Audio:
 
     def __init__(self, path: str = None, blocking: bool = False):
         """
-        :param path: the path where the audio will be stored in.    # TODO full path ?
+        :param path: the path where the audio will be stored in.
         :param blocking: a flag that indicates if the recording will be blocking or not.
         """
         self.path = path
@@ -58,14 +58,14 @@ class Audio:
         if self.path is not None and self.block is True:
             self.end = time.time()
             print("End Recording")
-            sf.write("../tmp/{file}".format(file=self.path), self.audio, fs)        # TODO v. riga 37
+            sf.write(self.path, self.audio, fs)
 
     def read_from_file(self):
         """
         Read the audio file stored in the FS.
         :return: the audio data (as a Numpy array) and the related sample rate (as an integer).
         """
-        data, fs = sf.read("../tmp/{file}".format(file=self.path), dtype='float32')     # TODO v. riga 37
+        data, fs = sf.read(self.path, dtype='float32')
         return data, fs
 
     def set_sample_rate(self, sm: int):
@@ -91,11 +91,11 @@ class Audio:
         if self.path is not None:
             print("End Recording")
             self.end = time.time()
-            sf.write("../tmp/{file}".format(file=self.path), self.audio, self.get_sample_rate())    # TODO v. riga 37
+            sf.write(self.path, self.audio, self.get_sample_rate())
             duration = self.get_real_duration() * 1000
-            audio = AudioSegment.from_wav("../tmp/{file}".format(file=self.path))[:duration]        # TODO v. riga 37
+            audio = AudioSegment.from_wav(self.path)[:duration]
             self.delete()
-            audio.export("../tmp/{file}".format(file=self.path), format="wav")                      # TODO v. riga 37
+            audio.export(self.path, format="wav")
             self.audio, fs = self.read_from_file()
 
     def wait(self):
@@ -111,9 +111,9 @@ class Audio:
         Delete the recorded audio from FS.
         """
         if self.start is not None:
-            os.remove("../tmp/{file}".format(file=self.path))                       # TODO v. riga 37
+            os.remove(self.path)
         else:
-            raise FileNotFoundError("{file} not found.".format(file=self.path))     # TODO v. riga 37
+            raise FileNotFoundError("{file} not found.".format(file=self.path))
 
     def get_real_duration(self):
         """
@@ -125,9 +125,9 @@ class Audio:
 
 
 if __name__ == "__main__":
-    a = Audio("franco.wav")
+    a = Audio("../tmp/audio.wav")
     a.rec(60)
     time.sleep(5)
     a.stop()
-    data, fs= sf.read("/tmp/franco.wav")
+    data, fs= sf.read(a.path)
     sd.play(data,fs)
