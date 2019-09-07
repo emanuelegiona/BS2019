@@ -6,6 +6,7 @@ from collections import namedtuple
 from typing import List
 import os.path
 import json
+import re
 
 
 """
@@ -138,6 +139,8 @@ class IdentificationClient:
         # REST client to be used for all Azure requests
         self.client = RESTClient(debug=self.__debug)
 
+        self.operation_id_regex = re.compile("^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$")
+
     # --- profile management ---
     def new_profile(self) -> str:
         """
@@ -150,8 +153,7 @@ class IdentificationClient:
                    "Content-Type": "application/json"}
         service_url = "{endpoint}{trailer}".format(endpoint=self.credentials.endpoint,
                                                    trailer=trailing_url)
-        body = {"locale":"en-US"}
-        #body = json.dumps(body)
+        body = {"locale": "en-US"}
 
         response = self.client.post(url=service_url,
                                     headers=headers,
@@ -195,7 +197,7 @@ class IdentificationClient:
         :param profile_id: Azure profile ID
         :param audio_path: Path to the audio file
         :param short_audio: if True, audio can be as short as 1 second; otherwise, minimum length is 5 seconds (5 minuts max anyway)
-        :return: URL to query for the status of this enrolment request, raises an error otherwise
+        :return: Azure operation ID assigned to this enrolment request, raises an error otherwise
         """
 
         if not os.path.exists(audio_path):
@@ -227,7 +229,7 @@ class IdentificationClient:
         if self.__debug:
             print("Enrollment URL: {url}".format(url=enrolment_url))
 
-        return enrolment_url
+        return enrolment_url.split("/")[-1]
 
     def reset_enrollments(self, profile_id: str) -> bool:
         """
@@ -294,6 +296,19 @@ class IdentificationClient:
 
         return response.content
 
+    def del_all_profiles(self) -> bool:
+        """
+        Deletes all the profiles for this Azure subscription key.
+        :return: True in case of success, raises an error otherwise
+        """
+
+        all_profiles = self.all_profiles()
+        for profile in all_profiles:
+            profile_id = profile["identificationProfileId"]
+            self.del_profile(profile_id=profile_id)
+
+        return True
+
     # --- identification ---
     def new_identification(self, audio_path: str, candidate_ids: List[str], short_audio: bool = False) -> str:
         """
@@ -301,7 +316,7 @@ class IdentificationClient:
         :param audio_path: Path to the audio file
         :param candidate_ids: List of candidate Azure profile IDs
         :param short_audio: if True, audio can be as short as 1 second; otherwise, minimum length is 5 seconds (5 minutes max anyway)
-        :return: URL to query for the status of this identification request, raises an error otherwise
+        :return: Azure operation ID assigned to this identification request, raises an error otherwise
         """
 
         if not os.path.exists(audio_path):
@@ -337,14 +352,18 @@ class IdentificationClient:
         if self.__debug:
             print("Identification URL: {url}".format(url=identification_url))
 
-        return identification_url
+        return identification_url.split("/")[-1]
 
+    # --- operations management ---
     def operation_status(self, operation_id: str) -> json:
         """
         Returns status of the given operation.
         :param operation_id: Azure operation ID
         :return: JSON containing the status in case of success, raises an error otherwise
         """
+
+        assert operation_id is not None, "An operation ID must be provided."
+        assert self.operation_id_regex.fullmatch(operation_id) is not None, "The provided operation ID is not valid."
 
         trailing_url = "operations/{id}".format(id=operation_id)
         headers = {"Ocp-Apim-Subscription-Key": self.credentials.key}
@@ -362,4 +381,14 @@ class IdentificationClient:
 
 
 if __name__ == "__main__":
-    pass
+    op_url = "https://speakerbs2019.cognitiveservices.azure.com/spid/v1.0/operations/258a16aa-0a3a-4e1a-bec3-2d766fda504b"
+    op_id = op_url.split("/")[-1]
+    print(op_id)
+
+    r = re.compile("^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$")
+
+    m = r.fullmatch(op_id)
+    print(m)
+
+    m = r.fullmatch("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa".replace("a", "z"))
+    print(m)
