@@ -7,6 +7,7 @@ from typing import List
 import os.path
 import json
 import re
+import time
 
 
 """
@@ -303,9 +304,17 @@ class IdentificationClient:
         """
 
         all_profiles = self.all_profiles()
+        iters = 1
         for profile in all_profiles:
             profile_id = profile["identificationProfileId"]
             self.del_profile(profile_id=profile_id)
+
+            # prevent the 20 requests in a minute limitation - 20+ requests should be an EXTREME edge case
+            iters += 1
+            if iters == 19:
+                if self.__debug:
+                    print("Waiting in order not to get banned for Azure API constraints.")
+                time.sleep(65)
 
         return True
 
