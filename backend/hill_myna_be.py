@@ -285,6 +285,7 @@ class HillMyna:
                 if self.__debug:
                     print("Waiting in order not to get banned for Azure API constraints.")
                 time.sleep(65)
+                iters = 1
 
         # wait for identification results
         time.sleep(self.operation_check_time)
@@ -301,6 +302,7 @@ class HillMyna:
                 if self.__debug:
                     print("Waiting in order not to get banned for Azure API constraints.")
                 time.sleep(65)
+                iters = 1
 
             # if there was a match
             if azure_id != "00000000-0000-0000-0000-000000000000":
@@ -335,6 +337,7 @@ class HillMyna:
                         if self.__debug:
                             print("Waiting in order not to get banned for Azure API constraints.")
                         time.sleep(65)
+                        iters = 1
 
             if len(candidates) > 0:
                 op_ids.append(self.__SpeakerClient.new_identification(audio_path=audio_path,
@@ -347,6 +350,7 @@ class HillMyna:
                     if self.__debug:
                         print("Waiting in order not to get banned for Azure API constraints.")
                     time.sleep(65)
+                    iters = 1
 
             # wait for identification results
             time.sleep(self.operation_check_time)
@@ -362,6 +366,7 @@ class HillMyna:
                     if self.__debug:
                         print("Waiting in order not to get banned for Azure API constraints.")
                     time.sleep(65)
+                    iters = 1
 
                 # if there was a match
                 if azure_id != "00000000-0000-0000-0000-000000000000":

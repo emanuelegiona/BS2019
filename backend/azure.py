@@ -315,6 +315,7 @@ class IdentificationClient:
                 if self.__debug:
                     print("Waiting in order not to get banned for Azure API constraints.")
                 time.sleep(65)
+                iters = 1
 
         return True
 
