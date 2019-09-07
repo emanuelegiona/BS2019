@@ -77,7 +77,7 @@ class HillMyna:
         self.ENROLLED = "Enrolled"
 
     # --- General ---
-    def operation_status(self, operation_id: str, enrollment: bool = False, identification: bool = True) -> str or (str, str):
+    def operation_status(self, operation_id: str, enrollment: bool = False, identification: bool = True) -> (str, str):
         """
         Checks the outcome of either an enrollment or an identification operation. The two are MUTUALLY EXCLUSIVE.
         In the case of an enrollment operation: returns a string containing the status of the enrollment phase.
@@ -86,7 +86,7 @@ class HillMyna:
         :param operation_id: Azure operation ID associated either to an enrollment operation, or to an identification one
         :param enrollment: if True, the operation to check is an enrollment one (MUTUALLY EXCLUSIVE, default: False)
         :param identification: if True, the operation to check is an identification one (MUTUALLY EXCLUSIVE, default: True)
-        :return: string or tuple of strings (according to the operation type) encoding the status of the operation
+        :return: tuple of strings (according to the operation type) encoding the status of the operation
         """
 
         assert not (enrollment and identification), "Enrollment and identification are two mutually exclusive operations."
@@ -116,13 +116,13 @@ class HillMyna:
                 if status == self.ENROLLING:
                     # fetch the remaining time in order to complete enrollment
                     remaining_time = json_response["remainingEnrollmentSpeechTime"]
-                    ret = "Enrollment phase can be completed with {time} more seconds.".format(time=remaining_time)
+                    ret = (self.ENROLLING, "Enrollment phase can be completed with {time} more seconds.".format(time=remaining_time))
 
                 elif status == self.TRAINING:
-                    ret = "Profile is currently in training phase and will be soon ready for identification."
+                    ret = (self.TRAINING, "Profile is currently in training phase and will be soon ready for identification.")
 
                 elif status == self.ENROLLED:
-                    ret = "Successfully enrolled."
+                    ret = (self.ENROLLED, "Successfully enrolled.")
 
             # go through all the identification cases
             elif identification:
@@ -408,7 +408,46 @@ class HillMyna:
         #print(IDclient.operation_status(status_URL))#RuntimeError: Get operation status failed: POST responded with 404 Resource not found
         #print(IDclient.get_profile(status_URL)) #RuntimeError: Get profile failed: POST responded with 404 Resource not found
 
+    def test2(self):
+        json = self.__SpeakerClient.all_profiles()
+        print("Before: there are {num} profiles.".format(num=len(json)))
+        self.__SpeakerClient.del_all_profiles()
+        json = self.__SpeakerClient.all_profiles()
+        print("After: there are {num} profiles.".format(num=len(json)))
+
+    def test3(self, new_user=False, rounds=8):
+        # fetch azure_id
+        azure_id = None
+        if new_user:
+            self.new_profile(username="emanuele", name="e", surname="g")
+
+        usr = self.__users_manager.get_by_username(username="emanuele")
+        time.sleep(self.operation_check_time)
+
+        # enrollment
+        # TODO while usr.status == self.ENROLLING --> maybe in the GUI
+        for i in range(rounds):
+            print("Round {i}\n".format(i=i))
+            # record
+            audio_path = "{base}/audio{ts}.wav".format(base=self.tmp_directory, ts=time.mktime(datetime.utcnow().timetuple()))
+            audio = Audio(path=audio_path,
+                          blocking=True)
+
+            self.get_words()
+            audio.rec(duration=6)
+
+            # actual enrollment
+            op_id = self.enrollment(azure_id=usr.azure_id, audio_path=audio_path)
+            time.sleep(self.operation_check_time)
+            result = self.operation_status(operation_id=op_id,
+                                           enrollment=True,
+                                           identification=False)
+            print(result)
+            audio.delete()
+
+        print(self.__SpeakerClient.get_profile(profile_id=usr.azure_id))
+
 
 if __name__ == "__main__":
-    h = HillMyna(data_directory="../data", tmp_directory="../tmp")
-    h.test()
+    h = HillMyna(data_directory="../data", tmp_directory="../tmp", debug=True)
+    h.test3(new_user=False, rounds=1)
