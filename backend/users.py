@@ -88,6 +88,10 @@ class UsersManager:
         # update JSON file
         self.__write_file()
 
+    def update_status(self, azure_id: str) -> None:
+        # TODO during the usage, HillMyna should be able to update users' status (AT LEAST)
+        pass
+
     def get_by_azure_id(self, azure_id: str) -> User:
         """
         Returns every information about a user stored in the database
