@@ -103,8 +103,9 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-# do not publish credentials
+# do not publish credentials or sensitive files
 data/credentials.csv
+data/users.txt
 
 # do not upload test tmp files
 tmp/
