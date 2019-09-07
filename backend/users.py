@@ -53,7 +53,7 @@ class UsersManager:
         else:
             raise KeyError("The user that should be eliminated does not exist")
 
-    def add(self, azure_id: str, username: str, name: str, surname: str, status: bool) -> None:
+    def add(self, azure_id: str, username: str, name: str, surname: str, status: str) -> None:
         """
         Adds a user into a dictionary:
         :param azure_id: Azure id of the new user
