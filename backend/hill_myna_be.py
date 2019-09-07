@@ -7,7 +7,13 @@ from typing import List
 from audio import Audio
 from users import User, UsersManager
 from datetime import datetime
+from collections import namedtuple
 import time
+
+"""
+Represents a single identification result.
+"""
+IdentificationResult = namedtuple("IdentificationResult", "azure_id confidence")
 
 
 class HillMyna:
@@ -31,11 +37,13 @@ class HillMyna:
         :param debug: if True, debug messages are printed to the standard output
         """
 
-        assert data_directory is not None, "Data directory must be provided"
-        assert tmp_directory is not None, "Temporary file directory must be provided"
+        assert data_directory is not None, "Data directory must be provided."
+        assert tmp_directory is not None, "Temporary file directory must be provided."
+        assert operation_check_time >= 0, "Invalid value for operation check time."
 
         self.__debug = debug
         self.tmp_directory = tmp_directory
+        self.operation_check_time = operation_check_time
 
         if self.__debug:
             print("Loading credentials file...")
@@ -250,6 +258,130 @@ class HillMyna:
             raise RuntimeError("Microsoft Azure internal error.")
 
         return ret
+
+    def identification(self, audio_path: str, short_audio: bool = False) -> User:
+        """
+        Returns the User identified in the given audio file, breaking possible ties.
+        :param audio_path: Path to the audio file
+        :param short_audio: if True, audio can be as short as 1 second; otherwise, minimum length is 5 seconds (5 minutes max anyway)
+        :return: User identified in the given audio, raises an error otherwise
+        """
+
+        ret = None
+
+        # list of operation IDs to be checked later
+        op_ids = []
+
+        # iterate on the lists of candidates, max 10 at once
+        iters = 1
+        for candidates in self.__users_manager.get_all_users():
+            op_ids.append(self.__SpeakerClient.new_identification(audio_path=audio_path,
+                                                                  candidate_ids=candidates,
+                                                                  short_audio=short_audio))
+
+            # prevent the 20 requests in a minute limitation - 200+ users should be an edge case
+            iters += 1
+            if iters == 19:
+                if self.__debug:
+                    print("Waiting in order not to get banned for Azure API constraints.")
+                time.sleep(65)
+
+        # wait for identification results
+        time.sleep(self.operation_check_time)
+
+        # check status - more than one user might be identified
+        identified_users = []
+        iters = 1
+        for op_id in op_ids:
+            azure_id, confidence = self.operation_status(operation_id=op_id)
+
+            # prevent the 20 requests in a minute limitation - 20+ requests should be an edge case
+            iters += 1
+            if iters == 19:
+                if self.__debug:
+                    print("Waiting in order not to get banned for Azure API constraints.")
+                time.sleep(65)
+
+            # if there was a match
+            if azure_id != "00000000-0000-0000-0000-000000000000":
+                identified_users.append(IdentificationResult(azure_id=azure_id,
+                                                             confidence=confidence))
+
+        # break ties, if any
+        if len(identified_users) > 1:
+            # debug stuff
+            if self.__debug:
+                print("Identification: there are {num} ties.".format(num=len(identified_users)))
+                for result in identified_users:
+                    print("\t- {user} with confidence {conf}".format(user=self.__users_manager.get_by_azure_id(azure_id=result.azure_id).username,
+                                                                     conf=result.confidence))
+
+            # still check for the 10 candidates max limit
+            op_ids = []
+            candidates = []
+            iters = 1
+            for result in identified_users:
+                candidates.append(result.azure_id)
+
+                if len(candidates) == 10:
+                    op_ids.append(self.__SpeakerClient.new_identification(audio_path=audio_path,
+                                                                          candidate_ids=candidates,
+                                                                          short_audio=short_audio))
+                    candidates = []
+
+                    # prevent the 20 requests in a minute limitation - 200+ ties should be an EXTREME edge case
+                    iters += 1
+                    if iters == 19:
+                        if self.__debug:
+                            print("Waiting in order not to get banned for Azure API constraints.")
+                        time.sleep(65)
+
+            if len(candidates) > 0:
+                op_ids.append(self.__SpeakerClient.new_identification(audio_path=audio_path,
+                                                                      candidate_ids=candidates,
+                                                                      short_audio=short_audio))
+
+                # prevent the 20 requests in a minute limitation - 200+ ties should be an EXTREME edge case
+                iters += 1
+                if iters == 19:
+                    if self.__debug:
+                        print("Waiting in order not to get banned for Azure API constraints.")
+                    time.sleep(65)
+
+            # wait for identification results
+            time.sleep(self.operation_check_time)
+
+            # check status
+            iters = 1
+            for op_id in op_ids:
+                azure_id, confidence = self.operation_status(operation_id=op_id)
+
+                # prevent the 20 requests in a minute limitation - 20+ requests should be an EXTREME edge case
+                iters += 1
+                if iters == 19:
+                    if self.__debug:
+                        print("Waiting in order not to get banned for Azure API constraints.")
+                    time.sleep(65)
+
+                # if there was a match
+                if azure_id != "00000000-0000-0000-0000-000000000000":
+                    ret = IdentificationResult(azure_id=azure_id,
+                                               confidence=confidence)
+
+        # simple case, there is only 1 identified user
+        elif len(identified_users) == 1:
+            ret = identified_users[0]
+
+        # retrieve user
+        if ret is not None:
+            user = self.__users_manager.get_by_azure_id(azure_id=ret.azure_id)
+            if self.__debug:
+                print("Identification: {user} with confidence {conf}".format(user=user.username,
+                                                                             conf=ret.confidence))
+        else:
+            raise RuntimeError("No user has been identified.")
+
+        return user
 
     def test(self):
         h = HillMyna(data_directory="../data", tmp_directory="../tmp", debug=True)
