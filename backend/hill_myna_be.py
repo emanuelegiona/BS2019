@@ -63,14 +63,19 @@ class HillMyna:
         creds = self.__credentials_manager.get(identification_resource)
         self.__SpeakerClient = IdentificationClient(credentials=creds, debug=self.__debug)
 
+        # profile status constants
+        self.ENROLLING = "Enrolling"
+        self.TRAINING = "Training"
+        self.ENROLLED = "Enrolled"
+
     # --- General ---
-    def operation_status(self, url: str, enrollment: bool = False, identification: bool = True) -> str or (str, str):
+    def operation_status(self, operation_id: str, enrollment: bool = False, identification: bool = True) -> str or (str, str):
         """
         Checks the outcome of either an enrollment or an identification operation. The two are MUTUALLY EXCLUSIVE.
         In the case of an enrollment operation: returns a string containing the status of the enrollment phase.
         In the case of an identification operation: returns a tuple of strings in the format (Azure ID, confidence).
         ATTENTION: an Azure ID equal to '00000000-0000-0000-0000-000000000000' means NO MATCH for the set of candidate IDs.
-        :param url: URL to query for updates, either associated to an enrollment operation, or to an identification one
+        :param operation_id: Azure operation ID associated either to an enrollment operation, or to an identification one
         :param enrollment: if True, the operation to check is an enrollment one (MUTUALLY EXCLUSIVE, default: False)
         :param identification: if True, the operation to check is an identification one (MUTUALLY EXCLUSIVE, default: True)
         :return: string or tuple of strings (according to the operation type) encoding the status of the operation
@@ -80,7 +85,7 @@ class HillMyna:
         assert enrollment or identification, "An operation must be provided."
 
         ret = ""
-        json_response = self.__SpeakerClient.operation_status(operation_id=url)     # TODO check url != operation ID
+        json_response = self.__SpeakerClient.operation_status(operation_id=operation_id)
         status = json_response["status"]
         if status == "failed":
             # fetch the error message
@@ -100,15 +105,15 @@ class HillMyna:
             # go through all the enrolment cases
             if enrollment:
                 status = json_response["enrollmentStatus"]
-                if status == "Enrolling":
+                if status == self.ENROLLING:
                     # fetch the remaining time in order to complete enrollment
                     remaining_time = json_response["remainingEnrollmentSpeechTime"]
                     ret = "Enrollment phase can be completed with {time} more seconds.".format(time=remaining_time)
 
-                elif status == "Training":
+                elif status == self.TRAINING:
                     ret = "Profile is currently in training phase and will be soon ready for identification."
 
-                elif status == "Enrolled":
+                elif status == self.ENROLLED:
                     ret = "Successfully enrolled."
 
             # go through all the identification cases
@@ -138,7 +143,11 @@ class HillMyna:
 
         azure_id = self.__SpeakerClient.new_profile()
         # user management: add user profile
-        self.__users_manager.add(person=None)   # TODO unclear: relazione con azure_id
+        self.__users_manager.add(azure_id=azure_id,
+                                 username=username,
+                                 name=name,
+                                 surname=surname,
+                                 status=self.ENROLLING)
 
     def delete_profile(self, username: str = None, azure_id: str = None) -> None:
         """
@@ -152,17 +161,17 @@ class HillMyna:
         assert not (username is None and azure_id is None), "Either a username or an Azure ID must be provided."
 
         if username is not None and azure_id is not None:
-            # TODO user management: check username and azure_id refer to the same user profile
-            # will do
-            pass
+            user_by_username = self.__users_manager.get_by_username(username=username)
+            user_by_azure_id = self.__users_manager.get_by_azure_id(azure_id=azure_id)
+            assert user_by_azure_id.azure_id == user_by_username.azure_id, "Azure ID and username MUST refer to the same user profile, when both provided."
 
         # user management: find azure_id if only username is provided
         elif username is not None:
-            azure_id = self.__users_manager.getId(username=username).AzureId        # TODO Info/User merge
+            azure_id = self.__users_manager.get_by_username(username=username).azure_id
 
         if self.__SpeakerClient.del_profile(profile_id=azure_id):
             # user management: delete user profile
-            self.__users_manager.remove(id=azure_id)
+            self.__users_manager.remove(identifier=azure_id)
 
     def enrollment(self, audio_path: str, username: str = None, azure_id: str = None, short_audio: bool = False) -> str:
         """
@@ -172,25 +181,25 @@ class HillMyna:
         :param username: User-chosen nickname (Optional)
         :param azure_id: Azure ID (Optional)
         :param short_audio: if True, audio can be as short as 1 second; otherwise, 5 seconds (Optional, default: False)
-        :return: URL to query for updates on this enrolment request status
+        :return: Azure operation ID assigned to this enrolment request status
         """
 
         assert not (username is None and azure_id is None), "Either a username or an Azure ID must be provided."
 
         if username is not None and azure_id is not None:
-            # TODO user management: check username and azure_id refer to the same user profile
-            # will do
-            pass
+            user_by_username = self.__users_manager.get_by_username(username=username)
+            user_by_azure_id = self.__users_manager.get_by_azure_id(azure_id=azure_id)
+            assert user_by_azure_id.azure_id == user_by_username.azure_id, "Azure ID and username MUST refer to the same user profile, when both provided."
 
         # user management: find azure_id if only username is provided
         elif username is not None:
-            azure_id = self.__users_manager.getId(username=username).AzureId  # TODO Info/User merge
+            azure_id = self.__users_manager.get_by_username(username=username).azure_id
 
-        url = self.__SpeakerClient.new_enrollment(profile_id=azure_id,
-                                                  audio_path=audio_path,
-                                                  short_audio=short_audio)
+        op_id = self.__SpeakerClient.new_enrollment(profile_id=azure_id,
+                                                    audio_path=audio_path,
+                                                    short_audio=short_audio)
 
-        return url
+        return op_id
     # --- --- ---
 
     # --- Logging in ---
