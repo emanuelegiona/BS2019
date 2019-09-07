@@ -21,26 +21,36 @@ class UsersManager:
         :param users_path: Path to the users file
         """
 
-        # Creation of a dictionary for future use, each entry formed by a string and a User
-        # self.UsId: {} : add if in need of a second dictionary
+        self.__path = users_path
 
-        self.AzId = {}
+        # Creation of a dictionary for future use, each entry formed by a string and a User
+        self.__dictionary = {}
 
         # creates an empty json if there is no json
         if not os.path.exists(users_path):
-            with open(users_path, 'w') as datb:
-                json.dump([], datb)
+            self.__write_file()
         if not os.path.isfile(users_path):
             raise FileNotFoundError("{file} must be a regular file.".format(file=users_path))
 
-
-        # read from json file and AzId fill
-
+        # read from json file and fill the dictionary
         with open(users_path, "r") as read_file:
             users = json.load(read_file)
-            for user in users:
-                person = User(user, user["username"], user["name"], user["surname"], user["status"])
-                self.AzId[user] = person
+
+        print(type(users))
+        for azure_id, user in users.items():
+            print(azure_id)
+            print(user)
+            person = User(azure_id=user[0],
+                          username=user[1],
+                          name=user[2],
+                          surname=user[3],
+                          status=user[4])
+
+            self.__dictionary[azure_id] = person
+
+    def __write_file(self):
+        with open(self.__path, "w") as f:
+            json.dump(self.__dictionary, f, indent=4)
 
     def remove(self, identifier: str) -> None:
         """
@@ -48,8 +58,11 @@ class UsersManager:
         :param identifier: String containing the azure_id to remove
         :return: None
         """
-        if identifier in self.AzId:
-            self.AzId.pop(identifier)
+        if identifier in self.__dictionary:
+            self.__dictionary.pop(identifier)
+
+            # update JSON file
+            self.__write_file()
         else:
             raise KeyError("The user that should be eliminated does not exist")
 
@@ -63,14 +76,17 @@ class UsersManager:
         :param status: status of the user
         :return: none
         """
-        if azure_id in self.AzId:
+        if azure_id in self.__dictionary:
             raise KeyError("Azure_id already existing, insert a new one in order to register the new user")
-        for _, values in self.AzId.values():
+        for _, values in self.__dictionary.items():
             if username == values.username:
                 raise KeyError("Username already taken, please choose one that has not been chosen")
 
         person = User(azure_id, username, name, surname, status)
-        self.AzId[azure_id] = person
+        self.__dictionary[azure_id] = person
+
+        # update JSON file
+        self.__write_file()
 
     def get_by_azure_id(self, azure_id: str) -> User:
         """
@@ -78,8 +94,8 @@ class UsersManager:
         :param azure_id: contains the Id of a user in order to search for its information
         :return: Returns a dictionary containing every information of a certain user
         """
-        if azure_id in self.AzId:
-            return self.AzId[azure_id]
+        if azure_id in self.__dictionary:
+            return self.__dictionary[azure_id]
         else:
             raise KeyError("The requested user does not exist in the db. Pls retry with an existent one")
 
@@ -89,7 +105,7 @@ class UsersManager:
         :param username: contains the username of a user in order to search for its informations
         :return : Returns a dictionary containing every information of a certain user
         """
-        for _, current_user in self.AzId.values():
+        for _, current_user in self.__dictionary.items():
             if username == current_user.username:
                 return current_user
         raise KeyError("No user with such username exists. please retry with an existing one")
@@ -101,7 +117,7 @@ class UsersManager:
         """
         all_users = []
         batch = []
-        for _, current_user in self.AzId.values():
+        for _, current_user in self.__dictionary.items():
             batch.append(current_user)
 
             if len(batch) == 10:
@@ -113,26 +129,9 @@ class UsersManager:
         return all_users
 
 
+if __name__ == "__main__":
+    um = UsersManager(users_path="../data/users.json")
+    um.remove("aaaa")
 
-
-
-
-
-
-
-
-"""if __name__ == "__main__":
-
-        prova = UsersManager(users_path="../data/datb.json")
-        prova=({'emanuele': {'angelo': 'matteo'}})
-        print(prova)
-        prova.remove("emanuele")
-        print(prova)
-"""
-
-
-
-
-
-
-
+    l = um.get_all_users()
+    print(l)

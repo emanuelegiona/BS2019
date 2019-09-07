@@ -13,7 +13,7 @@ import time
 class HillMyna:
 
     def __init__(self, data_directory: str, tmp_directory: str,
-                 credentials_fn: str = "credentials.csv", words_fn: str = "words.txt", users_fn: str = "users.txt",
+                 credentials_fn: str = "credentials.csv", words_fn: str = "words.txt", users_fn: str = "users.json",
                  speech_resource: str = "SpeechBS2019", identification_resource: str = "SpeakerBS2019",
                  operation_check_time: int = 30, remove_silences: bool = False,
                  debug: bool = False):
