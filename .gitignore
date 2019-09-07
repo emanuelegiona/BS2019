@@ -105,7 +105,7 @@ venv.bak/
 
 # do not publish credentials or sensitive files
 data/credentials.csv
-data/users.txt
+data/users.json
 
 # do not upload test tmp files
 tmp/
