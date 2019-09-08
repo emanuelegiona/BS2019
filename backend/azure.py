@@ -142,6 +142,15 @@ class IdentificationClient:
 
         self.operation_id_regex = re.compile("^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$")
 
+    def is_valid(self, operation_id: str) -> bool:
+        """
+        Returns True in case the given Azure operation ID is a valid one, False otherwise.
+        :param operation_id: Operation ID to check
+        :return: True if operation_id is a valid Azure operation ID, False otherwise
+        """
+
+        return self.operation_id_regex.fullmatch(operation_id) is not None
+
     # --- profile management ---
     def new_profile(self) -> str:
         """
@@ -374,7 +383,7 @@ class IdentificationClient:
         """
 
         assert operation_id is not None, "An operation ID must be provided."
-        assert self.operation_id_regex.fullmatch(operation_id) is not None, "The provided operation ID is not valid."
+        assert self.is_valid(operation_id), "The provided operation ID is not valid."
 
         trailing_url = "operations/{id}".format(id=operation_id)
         headers = {"Ocp-Apim-Subscription-Key": self.credentials.key}
