@@ -139,7 +139,7 @@ class UsersManager:
         """
         users_number = self.get_all_users()
         users_number = [len(l) for l in users_number]
-        return users_number
+        return sum(users_number)
 
 if __name__ == "__main__":
     um = UsersManager(users_path="../data/users.json")
