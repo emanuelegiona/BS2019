@@ -7,14 +7,17 @@ from typing import List
 import os.path
 import json
 
+"""
+Represents a user entry in the JSON file, mapping Azure IDs to a user's data.
+"""
 User = namedtuple("User", "azure_id username name surname status")
 
 
 class UsersManager:
-
     """
     This class implements the user manager, handling by using a json file where the user's info will be stored and possibly linked to their AzureID
     """
+
     def __init__(self, users_path: str):
         """
         UsersManager constructor.
@@ -36,10 +39,7 @@ class UsersManager:
         with open(users_path, "r") as read_file:
             users = json.load(read_file)
 
-        #print(type(users))
         for azure_id, user in users.items():
-            #print(azure_id)
-            #print(user)
             person = User(azure_id=user[0],
                           username=user[1],
                           name=user[2],
@@ -48,18 +48,24 @@ class UsersManager:
 
             self.__dictionary[azure_id] = person
 
-    def __write_file(self):
+    def __write_file(self) -> None:
+        """
+        Writes the internal dictionary holding users data to a JSON file.
+        :return: None
+        """
+
         with open(self.__path, "w") as f:
             json.dump(self.__dictionary, f, indent=4)
 
-    def remove(self, identifier: str) -> None:
+    def remove(self, azure_id: str) -> None:
         """
-        Removes a user from the dictionary
-        :param identifier: String containing the azure_id to remove
+        Removes the given user from the dictionary.
+        :param azure_id: Azure ID of the user to remove
         :return: None
         """
-        if identifier in self.__dictionary:
-            self.__dictionary.pop(identifier)
+
+        if azure_id in self.__dictionary:
+            self.__dictionary.pop(azure_id)
 
             # update JSON file
             self.__write_file()
@@ -68,14 +74,15 @@ class UsersManager:
 
     def add(self, azure_id: str, username: str, name: str, surname: str, status: str) -> None:
         """
-        Adds a user into a dictionary:
+        Adds a user into a dictionary.
         :param azure_id: Azure id of the new user
         :param username: new user's username
         :param name: name of the user
         :param surname: new user's surname
         :param status: status of the user
-        :return: none
+        :return: None
         """
+
         if azure_id in self.__dictionary:
             raise KeyError("Azure_id already existing, insert a new one in order to register the new user")
         for _, values in self.__dictionary.items():
@@ -88,9 +95,23 @@ class UsersManager:
         # update JSON file
         self.__write_file()
 
-    def update_status(self, azure_id: str) -> None:
-        # TODO during the usage, HillMyna should be able to update users' status (AT LEAST)
-        pass
+    def update_status(self, azure_id: str, new_status: str) -> None:
+        """
+        Updates a user status with the given one.
+        :param azure_id: Azure ID referring to the user
+        :param new_status: New status message
+        :return: None
+        """
+
+        user = self.get_by_azure_id(azure_id=azure_id)
+        repl = User(azure_id=user.azure_id,
+                    username=user.username,
+                    name=user.name,
+                    surname=user.surname,
+                    status=new_status)
+
+        self.__dictionary[azure_id] = repl
+        self.__write_file()
 
     def get_by_azure_id(self, azure_id: str) -> User:
         """
@@ -141,9 +162,9 @@ class UsersManager:
         users_number = [len(l) for l in users_number]
         return sum(users_number)
 
+
 if __name__ == "__main__":
     um = UsersManager(users_path="../data/users.json")
     l = um.get_all_users()
-    for user in l[0]:
-        print(user)
-
+    for u in l[0]:
+        print(u)
