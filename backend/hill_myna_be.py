@@ -17,6 +17,9 @@ IdentificationResult = namedtuple("IdentificationResult", "user confidence")
 
 
 class HillMyna:
+    """
+    Class implementing the HillMyna backend library, in order to build GUI or CLI applications.
+    """
 
     def __init__(self, data_directory: str, tmp_directory: str,
                  credentials_fn: str = "credentials.csv", words_fn: str = "words.txt",
@@ -138,6 +141,40 @@ class HillMyna:
                 ret = (azure_id, confidence)
 
         return ret
+
+    def get_tmp_filename(self, prefix: str, suffix: str, auto_full_path: bool = True) -> str:
+        """
+        Returns a temporary filename based on the current timestamp.
+        :param prefix: Filename prefix, before the timestamp
+        :param suffix: Filename suffix, after the timestamp (i.e. extension - with the dot)
+        :param auto_full_path: if True, the returned filename is automatically resolved to a path relative to the temporary directory
+        :return: Temporary filename according to the parameters
+        """
+
+        filename = "{prefix}{ts}{suffix}".format(prefix=prefix,
+                                                 ts=time.mktime(datetime.utcnow().timetuple()),
+                                                 suffix=suffix)
+
+        if auto_full_path:
+            filename = "{base}/{fn}".format(base=self.tmp_directory,
+                                            fn=filename)
+
+        return filename
+
+    @staticmethod
+    def start_recording(audio_path: str, duration: int, blocking: bool = False) -> Audio:
+        """
+        Returns an Audio object and starts a recording operation.
+        :param audio_path: Path to the audio file
+        :param duration: Duration of the recording (in seconds)
+        :param blocking: if True, the recording operation is blocking
+        :return: Audio object referring to the active recording operation
+        """
+
+        audio = Audio(path=audio_path, blocking=blocking)
+        audio.rec(duration=duration)
+
+        return audio
     # --- --- ---
 
     # --- Profile management ---
@@ -288,11 +325,17 @@ class HillMyna:
         if self.__debug:
             print("Azure ID: {azure_id} - Confidence: {conf}".format(azure_id=azure_id, conf=confidence))
 
-        if self.__SpeakerClient.is_valid(operation_id=azure_id) and azure_id != self.NO_IDENTIFICATION:
-            return IdentificationResult(user=self.__users_manager.get_by_azure_id(azure_id=azure_id),
-                                        confidence=confidence)
+        if self.__SpeakerClient.is_valid(operation_id=azure_id):
+            if azure_id != self.NO_IDENTIFICATION:
+                return IdentificationResult(user=self.__users_manager.get_by_azure_id(azure_id=azure_id),
+                                            confidence=confidence)
+            else:
+                return None
+
+        # in the case the result is NOT a valid Azure ID, it means that the returned tuple is actually (status, message) encoding the error
         else:
-            return None
+            raise RuntimeError("Identification status: {status} - {msg}".format(status=azure_id,
+                                                                                msg=confidence))
 
     def identification(self, audio_path: str, all_users: List[List[User]] = None, short_audio: bool = False, iteration: int = 1) -> User or None:
         """
@@ -470,16 +513,16 @@ class HillMyna:
         :return: None
         """
 
-        audio_path = "{base}/audio{ts}.wav".format(base=self.tmp_directory,
-                                                   ts=time.mktime(datetime.utcnow().timetuple()))
-        audio = Audio(path=audio_path,
-                      blocking=True)
-
+        audio_path = self.get_tmp_filename(prefix="audio",
+                                           suffix=".wav")
         self.get_words(number=10)
         candidates = [self.__users_manager.get_by_username("emanuele2"),
                       self.__users_manager.get_by_username("letizia")]
         print(candidates)
-        audio.rec(duration=15)
+        audio = self.start_recording(audio_path=audio_path,
+                                     duration=20)
+        time.sleep(15)
+        audio.stop()
         user = self.identification(audio_path=audio_path,
                                    all_users=[candidates],
                                    short_audio=True)
