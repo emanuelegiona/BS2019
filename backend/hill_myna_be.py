@@ -218,13 +218,14 @@ class HillMyna:
 
     # --- Logging in ---
     # word fetching, speech-to-text operations, identification operations
-    def get_words(self) -> List[str]:
+    def get_words(self, number: int = 5) -> List[str]:
         """
         Returns a list of randomly chosen words, containing no duplicates.
+        :param number: Number of words to be sampled from the dictionary
         :return: No-duplicate list of randomly chosen words
         """
 
-        words = self.__words_manager.get_words()
+        words = self.__words_manager.get_words(number=number)
         return words
 
     def speech_to_text(self, audio_path: str, detailed: bool = False) -> List[str]:
@@ -287,7 +288,7 @@ class HillMyna:
         if self.__debug:
             print("Azure ID: {azure_id} - Confidence: {conf}".format(azure_id=azure_id, conf=confidence))
 
-        if azure_id != self.NO_IDENTIFICATION:
+        if self.__SpeakerClient.is_valid(operation_id=azure_id) and azure_id != self.NO_IDENTIFICATION:
             return IdentificationResult(user=self.__users_manager.get_by_azure_id(azure_id=azure_id),
                                         confidence=confidence)
         else:
@@ -474,11 +475,11 @@ class HillMyna:
         audio = Audio(path=audio_path,
                       blocking=True)
 
-        self.get_words()
+        self.get_words(number=10)
         candidates = [self.__users_manager.get_by_username("emanuele2"),
                       self.__users_manager.get_by_username("letizia")]
         print(candidates)
-        audio.rec(duration=6)
+        audio.rec(duration=15)
         user = self.identification(audio_path=audio_path,
                                    all_users=[candidates],
                                    short_audio=True)
