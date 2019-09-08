@@ -19,7 +19,8 @@ IdentificationResult = namedtuple("IdentificationResult", "user confidence")
 class HillMyna:
 
     def __init__(self, data_directory: str, tmp_directory: str,
-                 credentials_fn: str = "credentials.csv", words_fn: str = "words.txt", users_fn: str = "users.json",
+                 credentials_fn: str = "credentials.csv", words_fn: str = "words.txt",
+                 users_fn: str = "users.json", enrollment_fn: str = "enrollment.txt",
                  speech_resource: str = "SpeechBS2019", identification_resource: str = "SpeakerBS2019",
                  operation_check_time: int = 30, remove_silences: bool = False,
                  debug: bool = False):
@@ -30,6 +31,7 @@ class HillMyna:
         :param credentials_fn: Name of the file containing resource names, API keys, and REST endpoints
         :param words_fn: Name of the file containing words for anti-spoofing reasons
         :param users_fn: Name of the file containing HillMyna users
+        :param enrollment_fn: Name of the file containing text to be used for the enrollment operation
         :param speech_resource: Name of the Azure resource to be used for speech-to-text
         :param identification_resource: Name of the Azure resource to be used for speaker identification
         :param operation_check_time: Time (in seconds) to wait before querying Azure for operation result; can be tweaked to reduce API limits consume
@@ -42,7 +44,9 @@ class HillMyna:
         assert operation_check_time >= 0, "Invalid value for operation check time."
 
         self.__debug = debug
+        self.data_directory = data_directory
         self.tmp_directory = tmp_directory
+        self.enrollment_fn = enrollment_fn
         self.operation_check_time = operation_check_time
 
         if self.__debug:
@@ -85,7 +89,6 @@ class HillMyna:
         Checks the outcome of either an enrollment or an identification operation. The two are MUTUALLY EXCLUSIVE.
         In the case of an enrollment operation: returns a string containing the status of the enrollment phase.
         In the case of an identification operation: returns a tuple of strings in the format (Azure ID, confidence).
-        ATTENTION: an Azure ID equal to '00000000-0000-0000-0000-000000000000' means NO MATCH for the set of candidate IDs.
         :param operation_id: Azure operation ID associated either to an enrollment operation, or to an identification one
         :param enrollment: if True, the operation to check is an enrollment one (MUTUALLY EXCLUSIVE, default: False)
         :param identification: if True, the operation to check is an identification one (MUTUALLY EXCLUSIVE, default: True)
@@ -101,13 +104,13 @@ class HillMyna:
         if status == "failed":
             # fetch the error message
             msg = json_response["message"]
-            ret = "The operation is failed with message: {msg}.".format(msg=msg)
+            ret = ("failed", "The operation is failed with message: {msg}.".format(msg=msg))
 
         elif status == "running":
-            ret = "The operation is running."
+            ret = ("running", "The operation is running.")
 
         elif status == "notstarted":
-            ret = "The operation is not started."
+            ret = ("notstarted", "The operation is not started.")
 
         elif status == "succeeded":
             # fetch the actual result of the operation
@@ -129,7 +132,7 @@ class HillMyna:
 
             # go through all the identification cases
             elif identification:
-                azure_id = json_response["identifiedProfileId"]     # No-match ID: "00000000-0000-0000-0000-000000000000"
+                azure_id = json_response["identifiedProfileId"]
                 confidence = json_response["confidence"]
 
                 ret = (azure_id, confidence)
@@ -281,6 +284,8 @@ class HillMyna:
 
         # check status
         azure_id, confidence = self.operation_status(operation_id=op_id)
+        if self.__debug:
+            print("Azure ID: {azure_id} - Confidence: {conf}".format(azure_id=azure_id, conf=confidence))
 
         if azure_id != self.NO_IDENTIFICATION:
             return IdentificationResult(user=self.__users_manager.get_by_azure_id(azure_id=azure_id),
@@ -427,7 +432,60 @@ class HillMyna:
 
         print(self.__SpeakerClient.get_profile(profile_id=usr.azure_id))
 
+    def test4(self):
+        """
+        Long text enrollment test
+        :return: None
+        """
+
+        self.new_profile(username="letizia",
+                         name="l",
+                         surname="g")
+        usr = self.__users_manager.get_by_username(username="letizia")
+        audio_path = "{base}/audio{ts}.wav".format(base=self.tmp_directory,
+                                                   ts=time.mktime(datetime.utcnow().timetuple()))
+        audio = Audio(path=audio_path,
+                      blocking=True)
+
+        with open("{base}/{fn}".format(base=self.data_directory,
+                                       fn=self.enrollment_fn)) as f:
+            for line in f:
+                print(line)
+
+        audio.rec(duration=50)
+        op_id = self.enrollment(azure_id=usr.azure_id,
+                                audio_path=audio_path)
+        time.sleep(self.operation_check_time)
+        result = self.operation_status(operation_id=op_id,
+                                       enrollment=True,
+                                       identification=False)
+        print(result)
+        audio.delete()
+        print(self.__SpeakerClient.get_profile(profile_id=usr.azure_id))
+
+    def test5(self):
+        """
+        Identification test
+        :return: None
+        """
+
+        audio_path = "{base}/audio{ts}.wav".format(base=self.tmp_directory,
+                                                   ts=time.mktime(datetime.utcnow().timetuple()))
+        audio = Audio(path=audio_path,
+                      blocking=True)
+
+        self.get_words()
+        candidates = [self.__users_manager.get_by_username("emanuele2"),
+                      self.__users_manager.get_by_username("letizia")]
+        print(candidates)
+        audio.rec(duration=6)
+        user = self.identification(audio_path=audio_path,
+                                   all_users=[candidates],
+                                   short_audio=True)
+        audio.delete()
+        print("\nIdentified user: {u}".format(u=user))
+
 
 if __name__ == "__main__":
     h = HillMyna(data_directory="../data", tmp_directory="../tmp", debug=True)
-    h.test3(new_user=False, rounds=1)
+    h.test5()
