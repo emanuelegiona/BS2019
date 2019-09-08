@@ -351,9 +351,10 @@ class IdentificationClient:
                                         headers=headers,
                                         params=parameters,
                                         data=file,
-                                        response_headers=True)
+                                        response_headers=True,
+                                        expect_json=False)
 
-        if response.code != 200:
+        if response.code != 202:
             msg = response.content["error"]["message"]
             raise RuntimeError("Enrolment failed: POST responded with {code} {msg}".format(code=response.code,
                                                                                            msg=msg))
