@@ -19,7 +19,6 @@ class HillMynaGUI:
                                   tmp_directory="tmp")
 
         self.__main_window = gui()
-        self.__users_manager = self.__backend.get_users_manager()
         self.add_tabs()
         self.__main_window.setTitle("Hill Myna")
         self.__main_window.setSize(700, 500)
@@ -74,8 +73,7 @@ class HillMynaGUI:
         self.__main_window.addTable("g1",  [["Username", "Status"]]
                                     , action=self.fire, actionButton=["edit", "new enrollment", "delete"],
                                     addRow=self.login_function)
-        um = self.__users_manager
-        users = um.get_all_users()
+        users = self.__backend.get_all_users()
         for user in users[0]:
             user = [user[1], user[4]]
             self.__main_window.addTableRow("g1", user)
@@ -90,7 +88,7 @@ class HillMynaGUI:
             # fetch azure_id
             if status == "Enrolling":
                 azure_id = None
-                usr = self.__users_manager.get_by_username(username=user)
+                usr = self.__backend.get_by_username(username=user)
                 # enrollment
                 # TODO while usr.status == self.ENROLLING --> maybe in the GUI
                 # record

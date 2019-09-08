@@ -392,6 +392,9 @@ class HillMyna:
     def get_users_number(self) -> int:
         return self.__users_manager.get_users_number()
 
+    def get_all_users(self):
+        return self.__users_manager.get_all_users()
+
     def test(self):
         h = HillMyna(data_directory="../data", tmp_directory="../tmp", debug=True)
 
