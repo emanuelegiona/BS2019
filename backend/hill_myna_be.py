@@ -224,6 +224,17 @@ class HillMyna:
             # user management: delete user profile
             self.__users_manager.remove(azure_id=azure_id)
 
+    def delete_all_profiles(self) -> None:
+        """
+        Deletes all the registered profiles both on Azure and in the JSON file.
+        :return: None
+        """
+
+        self.__SpeakerClient.del_all_profiles()
+        for users in self.__users_manager.get_all_users():
+            for user in users:
+                self.__users_manager.remove(azure_id=user.azure_id)
+
     def enrollment(self, audio_path: str, username: str = None, azure_id: str = None, short_audio: bool = False) -> str:
         """
         Associates a new enrollment procedure to an existing profile, referenced either by its username or Azure ID.
@@ -476,27 +487,28 @@ class HillMyna:
 
         print(self.__SpeakerClient.get_profile(profile_id=usr.azure_id))
 
-    def test4(self):
+    def test4(self, username: str):
         """
         Long text enrollment test
+        :param username: Username of the user to create
         :return: None
         """
 
-        self.new_profile(username="letizia",
-                         name="l",
-                         surname="g")
-        usr = self.__users_manager.get_by_username(username="letizia")
-        audio_path = "{base}/audio{ts}.wav".format(base=self.tmp_directory,
-                                                   ts=time.mktime(datetime.utcnow().timetuple()))
-        audio = Audio(path=audio_path,
-                      blocking=True)
+        self.new_profile(username=username,
+                         name="aaa",
+                         surname="bbb")
+        usr = self.__users_manager.get_by_username(username=username)
+        audio_path = self.get_tmp_filename(prefix="audio",
+                                           suffix=".wav")
 
         with open("{base}/{fn}".format(base=self.data_directory,
                                        fn=self.enrollment_fn)) as f:
             for line in f:
-                print(line)
+                print(line.strip("\n"))
 
-        audio.rec(duration=50)
+        audio = self.start_recording(audio_path=audio_path,
+                                     duration=60,
+                                     blocking=True)
         op_id = self.enrollment(azure_id=usr.azure_id,
                                 audio_path=audio_path)
         time.sleep(self.operation_check_time)
@@ -509,22 +521,18 @@ class HillMyna:
 
     def test5(self):
         """
-        Identification test
+        Identification test on all registered profiles
         :return: None
         """
 
         audio_path = self.get_tmp_filename(prefix="audio",
                                            suffix=".wav")
         self.get_words(number=10)
-        candidates = [self.__users_manager.get_by_username("emanuele2"),
-                      self.__users_manager.get_by_username("letizia")]
-        print(candidates)
         audio = self.start_recording(audio_path=audio_path,
                                      duration=20)
         time.sleep(15)
         audio.stop()
         user = self.identification(audio_path=audio_path,
-                                   all_users=[candidates],
                                    short_audio=True)
         audio.delete()
         print("\nIdentified user: {u}".format(u=user))
