@@ -36,10 +36,10 @@ class UsersManager:
         with open(users_path, "r") as read_file:
             users = json.load(read_file)
 
-        print(type(users))
+        #print(type(users))
         for azure_id, user in users.items():
-            print(azure_id)
-            print(user)
+            #print(azure_id)
+            #print(user)
             person = User(azure_id=user[0],
                           username=user[1],
                           name=user[2],
@@ -132,10 +132,18 @@ class UsersManager:
 
         return all_users
 
+    def get_users_number(self) -> int:
+        """
+        The function returns the total number of users.
+        :return: The total number of users as an integer.
+        """
+        users_number = self.get_all_users()
+        users_number = [len(l) for l in users_number]
+        return users_number
 
 if __name__ == "__main__":
     um = UsersManager(users_path="../data/users.json")
-    um.remove("aaaa")
-
     l = um.get_all_users()
-    print(l)
+    for user in l[0]:
+        print(user)
+

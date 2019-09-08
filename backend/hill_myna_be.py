@@ -221,6 +221,7 @@ class HillMyna:
         words = self.__words_manager.get_words()
         return words
 
+
     def speech_to_text(self, audio_path: str, detailed: bool = False) -> List[str]:
         """
         Returns a list of words recognized in the given audio file.
@@ -388,6 +389,9 @@ class HillMyna:
 
         return user
 
+    def get_users_number(self) -> int:
+        return self.__users_manager.get_users_number()
+
     def test(self):
         h = HillMyna(data_directory="../data", tmp_directory="../tmp", debug=True)
 
@@ -410,6 +414,7 @@ class HillMyna:
 
     def test2(self):
         json = self.__SpeakerClient.all_profiles()
+        print(json)
         print("Before: there are {num} profiles.".format(num=len(json)))
         self.__SpeakerClient.del_all_profiles()
         json = self.__SpeakerClient.all_profiles()
@@ -446,7 +451,6 @@ class HillMyna:
             audio.delete()
 
         print(self.__SpeakerClient.get_profile(profile_id=usr.azure_id))
-
 
 if __name__ == "__main__":
     h = HillMyna(data_directory="../data", tmp_directory="../tmp", debug=True)
