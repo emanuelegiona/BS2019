@@ -58,8 +58,8 @@ class HillMynaGUI:
         self.__display_words = self.__backend.get_words()
         words = ""
         for word in self.__display_words:
-            words += word+"\n"
-        self.__main_window.message("Repeat", "Step 1: \n When you're ready click rec and repeat the following terms:\n" + words)
+            words += "- "+word+"\n"
+        self.__main_window.message("Repeat", "Whenever you're ready, click rec and repeat the following terms:\n\n" + words)
         self.__main_window.addNamedButton("rec", "identification_rec", self.rec_identification)
         self.__main_window.stopTab()
 
@@ -79,14 +79,19 @@ class HillMynaGUI:
         elif self.__main_window.getButton("identification_rec") == "stop":
             self.__audio.stop()
             try:
+                self.__main_window.openTab("MainWindow", "Login")
+                self.__main_window.emptyCurrentContainer()
+                self.__main_window.addMessage(title="identification_status", text="Recognizing words...")
+                print("Recognizing words...")
                 recognized_words = set(self.__backend.speech_to_text(self.__audio.path))
-                print(recognized_words)
+                print("Expected: {w}".format(w=self.__display_words))
+                print("Recognized: {w}".format(w=recognized_words))
                 print("Correctly recognized {n} words".format(n=len(recognized_words.intersection(set(self.__display_words)))))
                 if len(recognized_words.intersection(set(self.__display_words))) > 0:
-                    self.__main_window.openTab("MainWindow", "Login")
-                    self.__main_window.emptyCurrentContainer()
+                    self.__main_window.setMessage(title="identification_status", text="Identifying user...")
+                    print("Identifying user...")
                     user = self.__backend.identification(self.__audio.path, short_audio=True)
-                    self.__main_window.message("Logged in as {user}".format(user=str(user.username)))
+                    self.__main_window.setMessage(title="identification_status", text="Logged in as {user}".format(user=str(user.username)))
                     self.__main_window.addButton("logout", func=self.logout_function)
                     self.__audio.delete()
             except Exception as e:
@@ -118,11 +123,11 @@ class HillMynaGUI:
                                                                    "one", "New profile")
         try:
             self.__backend.new_profile(username, name, surname)
-            azure_id = self.__backend.get_by_username(username)
-            user = [azure_id, username, name, surname, "Enrolling"]
-            self.__main_window.addTableRow("UsersTable", user)
+            user = self.__backend.get_by_username(username)
+            self.__main_window.addTableRow("UsersTable", [user.username, user.status])
             if self.__backend.get_users_number() == 1:
                 self.__main_window.setTabbedFrameEnabledTab("MainWindow", "Login", False)
+            self.__main_window.hideSubWindow("New profile")
 
         except Exception as e:
             self.__main_window.errorBox("Error:", str(e), "New profile")
@@ -158,16 +163,16 @@ class HillMynaGUI:
             if self.__main_window.yesNoBox("Delete", "Are you sure to delete the selected user?"):
                 user = self.__main_window.getTableRow("UsersTable", self._row_number)[0]
                 try:
-                    self.__backend.delete_profile(user.username)
+                    self.__backend.delete_profile(username=user)
                     self.__main_window.deleteTableRow("UsersTable", self._row_number)
                 except Exception as e:
                     self.__main_window.errorBox("Error", str(e), "New profile")
 
     def add_rec_popup(self):
         self.__main_window.startSubWindow("REC")
-        text = open(self.__backend.data_directory+"/{text}".format(text= self.__backend.enrollment_fn), "r")
-        self.__main_window.addMessage("Play", text="Please read the following text:\n\n {words}".format(
-            words= text.read()))
+        text = open(self.__backend.data_directory+"/{text}".format(text=self.__backend.enrollment_fn), "r")
+        self.__main_window.addMessage("Play", text="Please read the following text:\n\n {words}".format(words=text.read()))
+        text.close()
         self.__main_window.addNamedButton("rec", "enrollment_rec", self.rec_enrollment)
         self.__main_window.setStopFunction(self.__main_window.destroyAllSubWindows)
         self.__main_window.stopSubWindow()
