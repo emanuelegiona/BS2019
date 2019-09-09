@@ -19,24 +19,25 @@ class HillMynaGUI:
                                   tmp_directory="tmp")
 
         self.__main_window = gui()
+        self._row_number=None
         self.add_tabs()
         self.__main_window.setTitle("Hill Myna")
         self.__main_window.setSize(700, 500)
-        self.__main_window.setResizable(False)
+        self.__main_window.setResizable(True)
 
     def add_tabs(self, main_window: bool = True):
         self.__main_window.startTabbedFrame("MainWindow")
 
         # --- main login form ---
         self.__main_window.startTab("Login")
+
         self.__main_window.addLabel("Welcome to Hill Myna!")
 
         if main_window:
-            self.__main_window.addLabel("Click on the button to start recording to get identified.")
-            self.__main_window.addButton("Login", func=self.login_function)
+            self.__main_window.addLabel("Click on the button to start login procedure.")
+            self.__main_window.addButton("login", func=self.login_function)
         else:
             self.__main_window.addLabel("Logging in...")
-
         self.__main_window.stopTab()
         # --- --- ---
 
@@ -52,61 +53,149 @@ class HillMynaGUI:
 
     def login_function(self):
         print("Loggin in...")
-        self.__main_window.removeAllWidgets()
-        self.add_tabs(main_window=False)
+        self.__main_window.openTab("MainWindow", "Login")
+        self.__main_window.emptyCurrentContainer()
+        self.__display_words = self.__backend.get_words()
+        words=""
+        for word in self.__display_words: words+= word+"\n"
+        self.__main_window.message("Repeat", "Step 1: \n When you're ready click rec and repeat the following terms:\n"+words)
+        self.__main_window.addNamedButton("rec", "identification_rec", self.rec_identification)
+        self.__main_window.stopTab()
+
+    def logout_function(self):
+        self.__main_window.openTab("MainWindow", "Login")
+        self.__main_window.emptyCurrentContainer()
+        self.__main_window.addLabel("Click on the button to start login procedure.")
+        self.__main_window.addButton("login", func=self.login_function)
+        self.__main_window.stopTab()
+
+    def rec_identification(self, btn):
+        if self.__main_window.getButton("identification_rec") == "rec":
+            audio_path = "{base}/audio{ts}.wav".format(base=self.__backend.tmp_directory,
+                                                       ts=time.mktime(datetime.utcnow().timetuple()))
+            self.__audio = self.__backend.start_recording(audio_path, duration=60)
+            self.__main_window.setButton("identification_rec", "stop")
+        elif self.__main_window.getButton("identification_rec") == "stop":
+            self.__audio.stop()
+            try:
+                recognized_words = set(self.__backend.speech_to_text(self.__audio.path))
+                print(recognized_words)
+                print("Correctly recognized {n} words".format(n=len(recognized_words.intersection(set(self.__display_words)))))
+                if len(recognized_words.intersection(set(self.__display_words))) > 0:
+                    self.__main_window.openTab("MainWindow", "Login")
+                    self.__main_window.emptyCurrentContainer()
+                    user = self.__backend.identification(self.__audio.path, short_audio=True)
+                    self.__main_window.message("Logged in as {user}".format(user=str(user.username)))
+                    self.__main_window.addButton("logout", func=self.logout_function)
+                    self.__audio.delete()
+            except Exception as e:
+                self.__audio.delete()
+                self.__main_window.errorBox("Error:", str(e))
 
     def start(self):
         self.__main_window.go()
 
     def show_new_profile_form(self):
-        self.__main_window.openTab("MainWindow","Users")
-        self.__main_window.addLabel("userLab", "Username:", 0, 0)
-        self.__main_window.addEntry("userEnt", 0, 1)
-        self.__main_window.addLabel("nameLab", "Name:", 1, 0)
-        self.__main_window.addEntry("nameEnt", 1, 1)
-        self.__main_window.addLabel("surLab", "Surname:", 2, 0)
-        self.__main_window.addEntry("surEnt", 2, 1)
-        self.__main_window.addButtons(["Submit", "Cancel"], None, colspan=2)
-        self.__main_window.closeTab("Users")
+        self.__main_window.startSubWindow("New profile")
+        self.__main_window.addLabelEntry("Name")
+        self.__main_window.addLabelEntry("Surname")
+        self.__main_window.addLabelEntry("Username")
+        self.__main_window.setStopFunction(self.__main_window.destroyAllSubWindows)
+        self.__main_window.addButton("Submit", self.submit)
+        self.__main_window.stopSubWindow()
+        self.__main_window.showSubWindow("New profile")
+
+    def submit(self):
+        name = self.__main_window.getEntry("Name")
+        surname = self.__main_window.getEntry("Surname")
+        username = self.__main_window.getEntry("Username")
+        if self.hasNumbers(name) or self.hasNumbers(surname):
+            self.__main_window.errorBox("TypingErrorBox","Error: A name can't contain a number", "New profile")
+        for user in self.__backend.get_all_users()[0]:
+            if user.username == username:
+                self.__main_window.errorBox("UserAlreadyExisting:", "Username already in use, please choose a different "
+                                                                   "one", "New profile")
+        try:
+            self.__backend.new_profile(username, name, surname)
+            azure_id = self.__backend.get_by_username(username)
+            user = [azure_id, username, name, surname, "Enrolling"]
+            self.__main_window.addTableRow("UsersTable", user)
+            if self.__backend.get_users_number() == 1:
+                self.__main_window.setTabbedFrameEnabledTab("MainWindow", "Login", False)
+
+        except Exception as e:
+            self.__main_window.errorBox("Error:", str(e), "New profile")
+
+    def hasNumbers(self, s: str) -> bool:
+        return any(i.isdigit() for i in s)
 
     def show_db(self):
-        self.__main_window.addTable("g1",  [["Username", "Status"]]
-                                    , action=self.fire, actionButton=["edit", "new enrollment", "delete"],
-                                    addRow=self.login_function)
+        self.__main_window.addTable("UsersTable",  [["Username", "Status"]]
+                                    , action=self.fire, actionButton=["enrollment", "delete"],
+                                    addRow=self.show_new_profile_form)
         users = self.__backend.get_all_users()
         for user in users[0]:
             user = [user[1], user[4]]
-            self.__main_window.addTableRow("g1", user)
-
+            self.__main_window.addTableRow("UsersTable", user)
     def fire(self, btn, row_number):
-        print(self.__main_window.getTableRow("g1", row_number))
-        print(btn)
-        print(self.__backend.get_words())
-        if btn == "new enrollment":
-            user = self.__main_window.getTableRow("g1", row_number)[0]
-            status = self.__main_window.getTableRow("g1", row_number)[1]
+        self._row_number = row_number
+        if btn == "enrollment":
+            status = self.__main_window.getTableRow("UsersTable", self._row_number)[1]
             # fetch azure_id
             if status == "Enrolling":
-                azure_id = None
-                usr = self.__backend.get_by_username(username=user)
-                # enrollment
                 # TODO while usr.status == self.ENROLLING --> maybe in the GUI
-                # record
-                audio_path = "{base}/audio{ts}.wav".format(base=self.__backend.tmp_directory,
-                                                           ts=time.mktime(datetime.utcnow().timetuple()))
-                audio = Audio(path=audio_path,
-                              blocking=True)
-                self.__backend.get_words()
-                audio.rec(duration=6)
-                # actual enrollment
-                op_id = self.__backend.enrollment(azure_id=usr.azure_id, audio_path=audio_path)
+                self.add_rec_popup()
+                # record phase
+                self.__main_window.showSubWindow("REC")
+            elif status == "Enrolled":
+                self.__main_window.infoBox("Attention", "This user is already enrolled in the system.")
+            elif status == "Training":
+                self.__main_window.infoBox("Attention", "System is in training phase, retry later.")
+        if btn == "delete":
+            if (self.__main_window.yesNoBox("Delete","Are you sure to delete the selected user?")):
+                user = self.__main_window.getTableRow("UsersTable", self._row_number)[0]
+                try:
+                    self.__backend.delete_profile(user.username)
+                    self.__main_window.deleteTableRow("UsersTable", self._row_number)
+                except Exception as e:
+                    self.__main_window.errorBox("Error", str(e), "New profile")
+
+    def add_rec_popup(self):
+        self.__main_window.startSubWindow("REC")
+        text = open(self.__backend.data_directory+"/{text}".format(text= self.__backend.enrollment_fn), "r")
+        self.__main_window.addMessage("Play", text="Please read the following text:\n\n {words}".format(
+            words= text.read()))
+        self.__main_window.addNamedButton("rec", "enrollment_rec", self.rec_enrollment)
+        self.__main_window.setStopFunction(self.__main_window.destroyAllSubWindows)
+        self.__main_window.stopSubWindow()
+
+    def rec_enrollment(self):
+        if self.__main_window.getButton("enrollment_rec") == "rec":
+            audio_path = "{base}/audio{ts}.wav".format(base=self.__backend.tmp_directory,
+                                                       ts=time.mktime(datetime.utcnow().timetuple()))
+            print(audio_path)
+            self.__audio = self.__backend.start_recording(audio_path, blocking=False, duration=70)
+            self.__main_window.setButton("enrollment_rec", "stop")
+        elif self.__main_window.getButton("enrollment_rec") == "stop":
+            self.__audio.stop()
+            user = self.__main_window.getTableRow("UsersTable", self._row_number)[0]
+            usr = self.__backend.get_by_username(username=user)
+            self.__main_window.destroyAllSubWindows()
+            # actual enrollment
+            try:
+                op_id = self.__backend.enrollment(azure_id=usr.azure_id, audio_path=self.__audio.path)
+                self.__audio.delete()
+                time.sleep(self.__backend.operation_check_time)
                 result = self.__backend.operation_status(operation_id=op_id,
                                                enrollment=True,
                                                identification=False)
-                print(result)
-                audio.delete()
-                #print(self.__backend.get_speaker_client().get_profile(profile_id=usr.azure_id))
-                print(usr)
+                self.__main_window.infoBox("Result", result[1])
+                if(result[0] not in ("running", "not started", "failed")):
+                    self.__backend.update_status(usr.azure_id, result[0])
+            except Exception as e:
+                self.__main_window.errorBox("Error:", str(e))
+
+
 
 
 if __name__ == "__main__":

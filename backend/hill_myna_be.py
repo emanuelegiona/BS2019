@@ -427,6 +427,19 @@ class HillMyna:
 
         return self.__users_manager.get_all_users()
 
+    def get_by_username(self, username:str) -> User:
+        return self.__users_manager.get_by_username(username)
+
+    def update_status(self, azure_id: str, new_status: str) -> None:
+        """
+        Updates a user status with the given one.
+        :param azure_id: Azure ID referring to the user
+        :param new_status: New status message
+        :return: None
+        """
+        self.__users_manager.update_status(azure_id, new_status)
+
+
     def test(self):
         h = HillMyna(data_directory="../data", tmp_directory="../tmp", debug=True)
 
