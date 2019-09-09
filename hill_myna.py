@@ -56,9 +56,10 @@ class HillMynaGUI:
         self.__main_window.openTab("MainWindow", "Login")
         self.__main_window.emptyCurrentContainer()
         self.__display_words = self.__backend.get_words()
-        words=""
-        for word in self.__display_words: words+= word+"\n"
-        self.__main_window.message("Repeat", "Step 1: \n When you're ready click rec and repeat the following terms:\n"+words)
+        words = ""
+        for word in self.__display_words:
+            words += word+"\n"
+        self.__main_window.message("Repeat", "Step 1: \n When you're ready click rec and repeat the following terms:\n" + words)
         self.__main_window.addNamedButton("rec", "identification_rec", self.rec_identification)
         self.__main_window.stopTab()
 
@@ -109,8 +110,8 @@ class HillMynaGUI:
         name = self.__main_window.getEntry("Name")
         surname = self.__main_window.getEntry("Surname")
         username = self.__main_window.getEntry("Username")
-        if self.hasNumbers(name) or self.hasNumbers(surname):
-            self.__main_window.errorBox("TypingErrorBox","Error: A name can't contain a number", "New profile")
+        if self.has_numbers(name) or self.has_numbers(surname):
+            self.__main_window.errorBox("TypingErrorBox", "Error: A name can't contain a number", "New profile")
         for user in self.__backend.get_all_users()[0]:
             if user.username == username:
                 self.__main_window.errorBox("UserAlreadyExisting:", "Username already in use, please choose a different "
@@ -126,24 +127,26 @@ class HillMynaGUI:
         except Exception as e:
             self.__main_window.errorBox("Error:", str(e), "New profile")
 
-    def hasNumbers(self, s: str) -> bool:
+    @staticmethod
+    def has_numbers(s: str) -> bool:
         return any(i.isdigit() for i in s)
 
     def show_db(self):
-        self.__main_window.addTable("UsersTable",  [["Username", "Status"]]
-                                    , action=self.fire, actionButton=["enrollment", "delete"],
+        self.__main_window.addTable("UsersTable", [["Username", "Status"]]
+                                    , action=self.user_action, actionButton=["enrollment", "delete"],
                                     addRow=self.show_new_profile_form)
-        users = self.__backend.get_all_users()
-        for user in users[0]:
-            user = [user[1], user[4]]
-            self.__main_window.addTableRow("UsersTable", user)
-    def fire(self, btn, row_number):
+        all_users = self.__backend.get_all_users()
+        for users in all_users:
+            for user in users:
+                user_row = [user.username, user.status]
+                self.__main_window.addTableRow("UsersTable", user_row)
+
+    def user_action(self, btn, row_number):
         self._row_number = row_number
         if btn == "enrollment":
             status = self.__main_window.getTableRow("UsersTable", self._row_number)[1]
             # fetch azure_id
             if status == "Enrolling":
-                # TODO while usr.status == self.ENROLLING --> maybe in the GUI
                 self.add_rec_popup()
                 # record phase
                 self.__main_window.showSubWindow("REC")
@@ -152,7 +155,7 @@ class HillMynaGUI:
             elif status == "Training":
                 self.__main_window.infoBox("Attention", "System is in training phase, retry later.")
         if btn == "delete":
-            if (self.__main_window.yesNoBox("Delete","Are you sure to delete the selected user?")):
+            if self.__main_window.yesNoBox("Delete", "Are you sure to delete the selected user?"):
                 user = self.__main_window.getTableRow("UsersTable", self._row_number)[0]
                 try:
                     self.__backend.delete_profile(user.username)
@@ -187,15 +190,13 @@ class HillMynaGUI:
                 self.__audio.delete()
                 time.sleep(self.__backend.operation_check_time)
                 result = self.__backend.operation_status(operation_id=op_id,
-                                               enrollment=True,
-                                               identification=False)
+                                                         enrollment=True,
+                                                         identification=False)
                 self.__main_window.infoBox("Result", result[1])
-                if(result[0] not in ("running", "not started", "failed")):
+                if result[0] not in ("running", "not started", "failed"):
                     self.__backend.update_status(usr.azure_id, result[0])
             except Exception as e:
                 self.__main_window.errorBox("Error:", str(e))
-
-
 
 
 if __name__ == "__main__":
