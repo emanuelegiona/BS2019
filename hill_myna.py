@@ -1,7 +1,7 @@
 """
 This file contains source code for starting the GUI of Hill Myna.
 """
-
+from appJar.appjar import ItemLookupError
 from hill_myna_be import HillMyna
 from appJar import gui
 import time
@@ -102,13 +102,20 @@ class HillMynaGUI:
         self.__main_window.go()
 
     def show_new_profile_form(self):
-        self.__main_window.startSubWindow("New profile")
-        self.__main_window.addLabelEntry("Name")
-        self.__main_window.addLabelEntry("Surname")
-        self.__main_window.addLabelEntry("Username")
-        self.__main_window.setStopFunction(self.__main_window.destroyAllSubWindows)
-        self.__main_window.addButton("Submit", self.submit)
-        self.__main_window.stopSubWindow()
+        try:
+            self.__main_window.startSubWindow("New profile")
+            self.__main_window.addLabelEntry("Name")
+            self.__main_window.addLabelEntry("Surname")
+            self.__main_window.addLabelEntry("Username")
+            self.__main_window.setStopFunction(self.__main_window.destroyAllSubWindows)
+            self.__main_window.addButton("Submit", self.submit)
+            self.__main_window.stopSubWindow()
+        except ItemLookupError:
+            pass
+
+        self.__main_window.setEntry(name="Name", text="", callFunction=False)
+        self.__main_window.setEntry(name="Surname", text="", callFunction=False)
+        self.__main_window.setEntry(name="Username", text="", callFunction=False)
         self.__main_window.showSubWindow("New profile")
 
     def submit(self):
