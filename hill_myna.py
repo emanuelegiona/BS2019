@@ -20,7 +20,7 @@ class HillMynaGUI:
                                   debug=True)
 
         self.__main_window = gui()
-        self._row_number=None
+        self._row_number = None
         self.add_tabs()
         self.__main_window.setTitle("Hill Myna")
         self.__main_window.setSize(700, 500)
@@ -46,14 +46,14 @@ class HillMynaGUI:
         self.__main_window.startTab("Users")
         self.show_db()
         self.__main_window.stopTab()
-        if self.__backend.get_users_number() is 0:
+        if self.__backend.get_users_number() == 0:
             self.__main_window.setTabbedFrameSelectedTab("MainWindow", "Users")
             self.__main_window.setTabbedFrameDisabledTab("MainWindow", "Login")
         # --- --- ---
         self.__main_window.stopTabbedFrame()
 
     def login_function(self):
-        print("Loggin in...")
+        print("Logging in...")
         self.__main_window.openTab("MainWindow", "Login")
         self.__main_window.emptyCurrentContainer()
         self.__display_words = self.__backend.get_words(number=10)
@@ -90,7 +90,7 @@ class HillMynaGUI:
                 intersection = recognized_words.intersection(set(self.__display_words))
                 print("Correctly recognized {n} words: {w}".format(n=len(intersection), w=intersection))
                 user = None
-                if len(recognized_words.intersection(set(self.__display_words))) >= self.__backend.threshold:
+                if len(recognized_words.intersection(set(self.__display_words))) >= self.__backend.word_threshold:
                     self.__main_window.setMessage(title="identification_status", text="Identifying user...")
                     print("Identifying user...")
                     selected_users = [self.__backend.get_by_username(username="angelo"),
@@ -104,7 +104,7 @@ class HillMynaGUI:
                 else:
                     self.__main_window.setMessage(title="identification_status",
                                                   text="Too few words have been recognized ({n} instead of {t}).".format(n=len(intersection),
-                                                                                                                         t=self.__backend.threshold))
+                                                                                                                         t=self.__backend.word_threshold))
                 self.__main_window.addButton("Logout" if user is not None else "Try again", func=self.logout_function)
                 self.__audio.delete()
             except Exception as e:
@@ -147,8 +147,11 @@ class HillMynaGUI:
             self.__backend.new_profile(username, name, surname)
             user = self.__backend.get_by_username(username)
             self.__main_window.addTableRow("UsersTable", [user.username, user.status])
-            if self.__backend.get_users_number() == 1:
+            user_number = self.__backend.get_users_number()
+            if user_number == 0 or user_number == 1:
                 self.__main_window.setTabbedFrameEnabledTab("MainWindow", "Login", False)
+            else:
+                self.__main_window.setTabbedFrameEnabledTab("MainWindow", "Login", True)
             self.__main_window.hideSubWindow("New profile")
 
         except Exception as e:
@@ -221,7 +224,8 @@ class HillMynaGUI:
                                                          identification=False)
                 self.__main_window.infoBox("Result", result[1])
                 if result[0] not in ("running", "not started", "failed"):
-                    self.__backend.update_status(usr.azure_id, result[0])
+                    self.__backend.update_status(azure_id=usr.azure_id, new_status=result[0])
+                    self.__main_window.replaceTableRow("UsersTable", self._row_number, [usr.username, result[0]])
             except Exception as e:
                 self.__main_window.errorBox("Error:", str(e))
 
