@@ -14,11 +14,17 @@ class HillMynaGUI:
     Class implementing HillMyna GUI.
     """
 
-    def __init__(self):
+    def __init__(self, debug: bool = False):
+        """
+        HillMyna GUI constructor.
+        :param debug: if True, debug messages are printed to the standard output
+        """
+
         self.__backend = HillMyna(data_directory="data",
                                   tmp_directory="tmp",
-                                  debug=True)
+                                  debug=debug)
 
+        self.__debug = debug
         self.__main_window = gui()
         self._row_number = None
         self.add_tabs()
@@ -26,7 +32,14 @@ class HillMynaGUI:
         self.__main_window.setSize(700, 500)
         self.__main_window.setResizable(True)
 
-    def add_tabs(self, main_window: bool = True):
+    # --- Main window ---
+    def add_tabs(self, main_window: bool = True) -> None:
+        """
+        Builds the main window and the tab structure.
+        :param main_window: if True, the main window is being built
+        :return: None
+        """
+
         self.__main_window.startTabbedFrame("MainWindow")
 
         # --- main login form ---
@@ -51,9 +64,17 @@ class HillMynaGUI:
             self.__main_window.setTabbedFrameDisabledTab("MainWindow", "Login")
         # --- --- ---
         self.__main_window.stopTabbedFrame()
+    # --- --- ---
 
-    def login_function(self):
-        print("Logging in...")
+    # --- Identification phase ---
+    def login_function(self) -> None:
+        """
+        Implements the login button, setting the main window in login mode.
+        :return: None
+        """
+
+        if self.__debug:
+            print("Logging in...")
         self.__main_window.openTab("MainWindow", "Login")
         self.__main_window.emptyCurrentContainer()
         self.__display_words = self.__backend.get_words(number=10)
@@ -64,7 +85,12 @@ class HillMynaGUI:
         self.__main_window.addNamedButton("rec", "identification_rec", self.rec_identification)
         self.__main_window.stopTab()
 
-    def logout_function(self):
+    def logout_function(self) -> None:
+        """
+        Implements the logout function, restoring the main window as when it first starts.
+        :return: None
+        """
+
         self.__main_window.openTab("MainWindow", "Login")
         self.__main_window.emptyCurrentContainer()
         self.__main_window.addLabel("Click on the button to start login procedure.")
@@ -72,6 +98,12 @@ class HillMynaGUI:
         self.__main_window.stopTab()
 
     def rec_identification(self, btn):
+        """
+        Implements the identification task, comprising both the speech-to-text and the user identification phases.
+        :param btn: (unused)
+        :return: None
+        """
+
         if self.__main_window.getButton("identification_rec") == "rec":
             audio_path = "{base}/audio{ts}.wav".format(base=self.__backend.tmp_directory,
                                                        ts=time.mktime(datetime.utcnow().timetuple()))
@@ -83,16 +115,20 @@ class HillMynaGUI:
                 self.__main_window.openTab("MainWindow", "Login")
                 self.__main_window.emptyCurrentContainer()
                 self.__main_window.addMessage(title="identification_status", text="Recognizing words...")
-                print("Recognizing words...")
+                if self.__debug:
+                    print("Recognizing words...")
                 recognized_words = set(self.__backend.speech_to_text(self.__audio.path))
-                print("Expected: {w}".format(w=self.__display_words))
-                print("Recognized: {w}".format(w=recognized_words))
+                if self.__debug:
+                    print("Expected: {w}".format(w=self.__display_words))
+                    print("Recognized: {w}".format(w=recognized_words))
                 intersection = recognized_words.intersection(set(self.__display_words))
-                print("Correctly recognized {n} words: {w}".format(n=len(intersection), w=intersection))
+                if self.__debug:
+                    print("Correctly recognized {n} words: {w}".format(n=len(intersection), w=intersection))
                 user = None
                 if len(recognized_words.intersection(set(self.__display_words))) >= self.__backend.word_threshold:
                     self.__main_window.setMessage(title="identification_status", text="Identifying user...")
-                    print("Identifying user...")
+                    if self.__debug:
+                        print("Identifying user...")
                     selected_users = [self.__backend.get_by_username(username="angelo"),
                                       self.__backend.get_by_username(username="emanuele"),
                                       self.__backend.get_by_username(username="matteo")]
@@ -110,11 +146,15 @@ class HillMynaGUI:
             except Exception as e:
                 self.__audio.delete()
                 self.__main_window.errorBox("Error:", str(e))
+    # --- --- ---
 
-    def start(self):
-        self.__main_window.go()
+    # --- User management ---
+    def show_new_profile_form(self) -> None:
+        """
+        Implements the new user window.
+        :return: None
+        """
 
-    def show_new_profile_form(self):
         try:
             self.__main_window.startSubWindow("New profile")
             self.__main_window.addLabelEntry("Name")
@@ -131,7 +171,12 @@ class HillMynaGUI:
         self.__main_window.setEntry(name="Username", text="", callFunction=False)
         self.__main_window.showSubWindow("New profile")
 
-    def submit(self):
+    def submit(self) -> None:
+        """
+        Implements the new user button action, requesting a new Azure ID and adding the user to the local JSON database.
+        :return: None
+        """
+
         name = self.__main_window.getEntry("Name")
         surname = self.__main_window.getEntry("Surname")
         username = self.__main_window.getEntry("Username")
@@ -159,9 +204,20 @@ class HillMynaGUI:
 
     @staticmethod
     def has_numbers(s: str) -> bool:
+        """
+        Sanity check for names and surnames.
+        :param s: String to check
+        :return: True if the string is deemed valid, False otherwise
+        """
+
         return any(i.isdigit() for i in s)
 
-    def show_db(self):
+    def show_db(self) -> None:
+        """
+        Implements the Users tab in the main window, loading users from the local JSON database, if any.
+        :return: None
+        """
+
         self.__main_window.addTable("UsersTable", [["Username", "Status"]]
                                     , action=self.user_action, actionButton=["enrollment", "delete"],
                                     addRow=self.show_new_profile_form)
@@ -171,7 +227,14 @@ class HillMynaGUI:
                 user_row = [user.username, user.status]
                 self.__main_window.addTableRow("UsersTable", user_row)
 
-    def user_action(self, btn, row_number):
+    def user_action(self, btn, row_number) -> None:
+        """
+        Implements actions for the buttons on each row of the users table, for enrollment and deletion operations.
+        :param btn: Button pressed
+        :param row_number: Number of the row in which the clicked button is in
+        :return: None
+        """
+
         self._row_number = row_number
         if btn == "enrollment":
             status = self.__main_window.getTableRow("UsersTable", self._row_number)[1]
@@ -193,7 +256,15 @@ class HillMynaGUI:
                 except Exception as e:
                     self.__main_window.errorBox("Error", str(e), "New profile")
 
-    def add_rec_popup(self):
+    # --- --- ---
+
+    # --- Enrollment phase ---
+    def add_rec_popup(self) -> None:
+        """
+        Implements the enrollment pop-up window, showing the enrollment text.
+        :return: None
+        """
+
         self.__main_window.startSubWindow("REC")
         text = open(self.__backend.data_directory+"/{text}".format(text=self.__backend.enrollment_fn), "r")
         self.__main_window.addMessage("Play", text="Please read the following text:\n\n {words}".format(words=text.read()))
@@ -202,11 +273,17 @@ class HillMynaGUI:
         self.__main_window.setStopFunction(self.__main_window.destroyAllSubWindows)
         self.__main_window.stopSubWindow()
 
-    def rec_enrollment(self):
+    def rec_enrollment(self) -> None:
+        """
+        Implements actions for the enrollment buttons, for audio recording and starting the enrollment phase on Azure.
+        :return: None
+        """
+
         if self.__main_window.getButton("enrollment_rec") == "rec":
             audio_path = "{base}/audio{ts}.wav".format(base=self.__backend.tmp_directory,
                                                        ts=time.mktime(datetime.utcnow().timetuple()))
-            print(audio_path)
+            if self.__debug:
+                print(audio_path)
             self.__audio = self.__backend.start_recording(audio_path, blocking=False, duration=70)
             self.__main_window.setButton("enrollment_rec", "stop")
         elif self.__main_window.getButton("enrollment_rec") == "stop":
@@ -228,9 +305,17 @@ class HillMynaGUI:
                     self.__main_window.replaceTableRow("UsersTable", self._row_number, [usr.username, result[0]])
             except Exception as e:
                 self.__main_window.errorBox("Error:", str(e))
+    # --- --- ---
+
+    def start(self) -> None:
+        """
+        Starts the GUI.
+        :return: None
+        """
+
+        self.__main_window.go()
 
 
 if __name__ == "__main__":
-    print("Hill Myna 0.0\nA biometric system project where you get to repeat words")
     g = HillMynaGUI()
     g.start()
