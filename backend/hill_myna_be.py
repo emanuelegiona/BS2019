@@ -25,7 +25,8 @@ class HillMyna:
                  credentials_fn: str = "credentials.csv", words_fn: str = "words.txt",
                  users_fn: str = "users.json", enrollment_fn: str = "enrollment.txt",
                  speech_resource: str = "SpeechBS2019", identification_resource: str = "SpeakerBS2019",
-                 threshold: int = 6, operation_check_time: int = 30, remove_silences: bool = False,
+                 word_threshold: int = 6, confidence_threshold: str = "High",
+                 operation_check_time: int = 30, remove_silences: bool = False,
                  debug: bool = False):
         """
         Hill myna backend constructor.
@@ -37,7 +38,7 @@ class HillMyna:
         :param enrollment_fn: Name of the file containing text to be used for the enrollment operation
         :param speech_resource: Name of the Azure resource to be used for speech-to-text
         :param identification_resource: Name of the Azure resource to be used for speaker identification
-        :param threshold: Number of minimum recognied words for a successful login
+        :param word_threshold: Number of minimum recognied words for a successful login
         :param operation_check_time: Time (in seconds) to wait before querying Azure for operation result; can be tweaked to reduce API limits consume
         :param remove_silences: (EXPERIMENTAL) if True, silence is detected and removed from audio files before Azure processes it
         :param debug: if True, debug messages are printed to the standard output
@@ -51,7 +52,8 @@ class HillMyna:
         self.data_directory = data_directory
         self.tmp_directory = tmp_directory
         self.enrollment_fn = enrollment_fn
-        self.threshold = threshold
+        self.word_threshold = word_threshold
+        self.confidence_threshold = confidence_threshold
         self.operation_check_time = operation_check_time
 
         if self.__debug:
@@ -85,8 +87,11 @@ class HillMyna:
         self.TRAINING = "Training"
         self.ENROLLED = "Enrolled"
 
-        # identification failure constant for azure_id comparison
+        # identification contants
         self.NO_IDENTIFICATION = "00000000-0000-0000-0000-000000000000"
+        self.CONFIDENCE_HIGH = "High"
+        self.CONFIDENCE_NORMAL = "Normal"
+        self.CONFIDENCE_LOW = "Low"
 
     # --- General ---
     def operation_status(self, operation_id: str, enrollment: bool = False, identification: bool = True) -> (str, str):
@@ -177,6 +182,20 @@ class HillMyna:
         audio.rec(duration=duration)
 
         return audio
+
+    def check_confidence(self, confidence: str) -> bool:
+        """
+        Returns whether the confidence threshold is met or not.
+        :param confidence: Confidence level of an identification, as returned by Azure
+        :return: True if the given confidence meets the confidence threshold, False otherwise
+        """
+
+        if self.confidence_threshold == self.CONFIDENCE_HIGH:
+            return confidence == self.CONFIDENCE_HIGH
+        elif self.confidence_threshold == self.CONFIDENCE_NORMAL:
+            return confidence == self.CONFIDENCE_NORMAL or confidence == self.CONFIDENCE_HIGH
+        else:
+            return confidence != self.CONFIDENCE_LOW
     # --- --- ---
 
     # --- Profile management ---
@@ -339,7 +358,7 @@ class HillMyna:
             print("Azure ID: {azure_id} - Confidence: {conf}".format(azure_id=azure_id, conf=confidence))
 
         if self.__SpeakerClient.is_valid(operation_id=azure_id):
-            if azure_id != self.NO_IDENTIFICATION:
+            if azure_id != self.NO_IDENTIFICATION and self.check_confidence(confidence=confidence):
                 return IdentificationResult(user=self.__users_manager.get_by_azure_id(azure_id=azure_id),
                                             confidence=confidence)
             else:
