@@ -16,7 +16,8 @@ class HillMynaGUI:
 
     def __init__(self):
         self.__backend = HillMyna(data_directory="data",
-                                  tmp_directory="tmp")
+                                  tmp_directory="tmp",
+                                  debug=True)
 
         self.__main_window = gui()
         self._row_number=None
@@ -55,7 +56,7 @@ class HillMynaGUI:
         print("Loggin in...")
         self.__main_window.openTab("MainWindow", "Login")
         self.__main_window.emptyCurrentContainer()
-        self.__display_words = self.__backend.get_words()
+        self.__display_words = self.__backend.get_words(number=10)
         words = ""
         for word in self.__display_words:
             words += "- "+word+"\n"
@@ -86,14 +87,26 @@ class HillMynaGUI:
                 recognized_words = set(self.__backend.speech_to_text(self.__audio.path))
                 print("Expected: {w}".format(w=self.__display_words))
                 print("Recognized: {w}".format(w=recognized_words))
-                print("Correctly recognized {n} words".format(n=len(recognized_words.intersection(set(self.__display_words)))))
-                if len(recognized_words.intersection(set(self.__display_words))) > 0:
+                intersection = recognized_words.intersection(set(self.__display_words))
+                print("Correctly recognized {n} words: {w}".format(n=len(intersection), w=intersection))
+                user = None
+                if len(recognized_words.intersection(set(self.__display_words))) >= self.__backend.threshold:
                     self.__main_window.setMessage(title="identification_status", text="Identifying user...")
                     print("Identifying user...")
-                    user = self.__backend.identification(self.__audio.path, short_audio=True)
-                    self.__main_window.setMessage(title="identification_status", text="Logged in as {user}".format(user=str(user.username)))
-                    self.__main_window.addButton("logout", func=self.logout_function)
-                    self.__audio.delete()
+                    selected_users = [self.__backend.get_by_username(username="angelo"),
+                                      self.__backend.get_by_username(username="emanuele"),
+                                      self.__backend.get_by_username(username="matteo")]
+                    user = self.__backend.identification(self.__audio.path, all_users=[selected_users], short_audio=True)
+                    if user is not None:
+                        self.__main_window.setMessage(title="identification_status", text="Logged in as {user}".format(user=str(user.username)))
+                    else:
+                        self.__main_window.setMessage(title="identification_status", text="No user could be identified.")
+                else:
+                    self.__main_window.setMessage(title="identification_status",
+                                                  text="Too few words have been recognized ({n} instead of {t}).".format(n=len(intersection),
+                                                                                                                         t=self.__backend.threshold))
+                self.__main_window.addButton("Logout" if user is not None else "Try again", func=self.logout_function)
+                self.__audio.delete()
             except Exception as e:
                 self.__audio.delete()
                 self.__main_window.errorBox("Error:", str(e))
@@ -124,10 +137,12 @@ class HillMynaGUI:
         username = self.__main_window.getEntry("Username")
         if self.has_numbers(name) or self.has_numbers(surname):
             self.__main_window.errorBox("TypingErrorBox", "Error: A name can't contain a number", "New profile")
-        for user in self.__backend.get_all_users()[0]:
-            if user.username == username:
-                self.__main_window.errorBox("UserAlreadyExisting:", "Username already in use, please choose a different "
-                                                                   "one", "New profile")
+
+        for users in self.__backend.get_all_users():
+            for user in users:
+                if user.username == username:
+                    self.__main_window.errorBox("UserAlreadyExisting:", "Username already in use, please choose a different "
+                                                                       "one", "New profile")
         try:
             self.__backend.new_profile(username, name, surname)
             user = self.__backend.get_by_username(username)

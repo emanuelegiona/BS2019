@@ -344,8 +344,8 @@ class IdentificationClient:
             raise FileNotFoundError("{file} must be a regular file.".format(file=audio_path))
         if len(candidate_ids) > 10:
             raise RuntimeError("Candidate IDs list must not exceed the size of 10.")
-        if len(set(candidate_ids)) <= 1:
-            raise RuntimeError("Candidate IDs list must contain at least 2 distinct IDs.")
+        #if len(set(candidate_ids)) <= 1:
+        #    raise RuntimeError("Candidate IDs list must contain at least 2 distinct IDs.")
 
         trailing_url = "identify"
         headers = {"Ocp-Apim-Subscription-Key": self.credentials.key,

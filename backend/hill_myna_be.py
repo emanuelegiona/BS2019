@@ -25,7 +25,7 @@ class HillMyna:
                  credentials_fn: str = "credentials.csv", words_fn: str = "words.txt",
                  users_fn: str = "users.json", enrollment_fn: str = "enrollment.txt",
                  speech_resource: str = "SpeechBS2019", identification_resource: str = "SpeakerBS2019",
-                 operation_check_time: int = 30, remove_silences: bool = False,
+                 threshold: int = 6, operation_check_time: int = 30, remove_silences: bool = False,
                  debug: bool = False):
         """
         Hill myna backend constructor.
@@ -37,6 +37,7 @@ class HillMyna:
         :param enrollment_fn: Name of the file containing text to be used for the enrollment operation
         :param speech_resource: Name of the Azure resource to be used for speech-to-text
         :param identification_resource: Name of the Azure resource to be used for speaker identification
+        :param threshold: Number of minimum recognied words for a successful login
         :param operation_check_time: Time (in seconds) to wait before querying Azure for operation result; can be tweaked to reduce API limits consume
         :param remove_silences: (EXPERIMENTAL) if True, silence is detected and removed from audio files before Azure processes it
         :param debug: if True, debug messages are printed to the standard output
@@ -50,6 +51,7 @@ class HillMyna:
         self.data_directory = data_directory
         self.tmp_directory = tmp_directory
         self.enrollment_fn = enrollment_fn
+        self.threshold = threshold
         self.operation_check_time = operation_check_time
 
         if self.__debug:
@@ -553,4 +555,5 @@ class HillMyna:
 
 if __name__ == "__main__":
     h = HillMyna(data_directory="../data", tmp_directory="../tmp", debug=True)
-    h.test5()
+    #h.test5()
+    h.delete_all_profiles()
