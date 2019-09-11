@@ -1,7 +1,7 @@
 """
 This file contains the Hill Myna backend source code, which is directly called by the GUI.
 """
-from backend.azure import Credentials, CredentialsManager, SpeechToTextClient, IdentificationClient
+from backend.azure import CredentialsManager, SpeechToTextClient, IdentificationClient
 from backend.words import WordManager
 from typing import List
 from backend.audio import Audio

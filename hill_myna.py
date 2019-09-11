@@ -5,7 +5,6 @@ from appJar.appjar import ItemLookupError
 from backend.hill_myna_be import HillMyna
 from appJar import gui
 import time
-from backend.audio import Audio
 from datetime import datetime
 
 

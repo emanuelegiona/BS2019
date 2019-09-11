@@ -6,27 +6,7 @@ import soundfile as sf
 import os
 import time
 from pydub import AudioSegment
-"""
-useful libraries for eventual implementation of silence removal:
 
-import numpy as np
-from scipy.io import wavfile
-from pydub import AudioSegment,silence
-from pydub.playback import play
-
-Example of usage of sounddevice library:
-source: https://python-sounddevice.readthedocs.io/en/0.3.13/usage.html
-fs=16000 #sampling rate 16 kHz
-sd.default.samplerate = fs
-duration = 5.0  # seconds
-myrecording = sd.rec(int(duration * fs), samplerate=fs, channels=1)
-sd.wait()
-sd.play(myrecording, fs)
-sf.write(path, myrecording, fs)
-data, fs = sf.read(path, dtype='float32') #to read an already existing audio sample from FS
-sd.play(data, fs)
-sd.wait()
-"""
 sd.default.samplerate = 16000
 
 
@@ -68,14 +48,16 @@ class Audio:
         data, fs = sf.read(self.path, dtype='float32')
         return data, fs
 
-    def set_sample_rate(self, sm: int):
+    @staticmethod
+    def set_sample_rate(sm: int):
         """
         Set the sample rate for recording.
         :param sm: is the frequency sampling (sampling rate) of the captured audio expressed as an integer.
         """
         sd.default.samplerate = sm
 
-    def get_sample_rate(self):
+    @staticmethod
+    def get_sample_rate():
         """
         Return the sample rate for recording.
         :return the frequency sampling (sampling rate) of the captured audio expressed as an integer.
@@ -98,7 +80,8 @@ class Audio:
             audio.export(self.path, format="wav")
             self.audio, fs = self.read_from_file()
 
-    def wait(self):
+    @staticmethod
+    def wait():
         """
         If the recording was already finished, this returns immediately; if not, it waits and returns as soon as the
         recording is finished.
@@ -129,5 +112,5 @@ if __name__ == "__main__":
     a.rec(60)
     time.sleep(5)
     a.stop()
-    data, fs= sf.read(a.path)
-    sd.play(data,fs)
+    data, fs = sf.read(a.path)
+    sd.play(data, fs)
