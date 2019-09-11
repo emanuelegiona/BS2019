@@ -460,68 +460,8 @@ class HillMyna:
         """
         self.__users_manager.update_status(azure_id, new_status)
 
-
-    def test(self):
-        h = HillMyna(data_directory="../data", tmp_directory="../tmp", debug=True)
-
-        # random pick words
-        h.get_words()
-        # do the recording and get the path
-        a = datetime.utcnow()
-        ts = time.mktime(a.timetuple())
-        audio_path = "../tmp/audio{timestamp}.wav".format(timestamp=ts)
-        a = Audio(path=audio_path, blocking=True)
-        a.rec(duration=6)
-        IDclient = IdentificationClient(h.__credentials_manager.get("SpeakerBS2019"))
-        profileID = IDclient.new_profile()
-        status_url = IDclient.new_enrollment(profileID, audio_path)
-        print("PROFILE:  "+profileID)
-        print("STATUS:   "+str(status_url))
-        a.delete()
-        #print(IDclient.operation_status(status_URL))#RuntimeError: Get operation status failed: POST responded with 404 Resource not found
-        #print(IDclient.get_profile(status_URL)) #RuntimeError: Get profile failed: POST responded with 404 Resource not found
-
-    def test2(self):
-        json = self.__SpeakerClient.all_profiles()
-        print(json)
-        print("Before: there are {num} profiles.".format(num=len(json)))
-        self.__SpeakerClient.del_all_profiles()
-        json = self.__SpeakerClient.all_profiles()
-        print("After: there are {num} profiles.".format(num=len(json)))
-
-    def test3(self, new_user=False, rounds=8):
-        # fetch azure_id
-        azure_id = None
-        if new_user:
-            self.new_profile(username="emanuele", name="e", surname="g")
-
-        usr = self.__users_manager.get_by_username(username="emanuele")
-        time.sleep(self.operation_check_time)
-
-        # enrollment
-        # TODO while usr.status == self.ENROLLING --> maybe in the GUI
-        for i in range(rounds):
-            print("Round {i}\n".format(i=i))
-            # record
-            audio_path = "{base}/audio{ts}.wav".format(base=self.tmp_directory, ts=time.mktime(datetime.utcnow().timetuple()))
-            audio = Audio(path=audio_path,
-                          blocking=True)
-
-            self.get_words()
-            audio.rec(duration=6)
-
-            # actual enrollment
-            op_id = self.enrollment(azure_id=usr.azure_id, audio_path=audio_path)
-            time.sleep(self.operation_check_time)
-            result = self.operation_status(operation_id=op_id,
-                                           enrollment=True,
-                                           identification=False)
-            print(result)
-            audio.delete()
-
-        print(self.__SpeakerClient.get_profile(profile_id=usr.azure_id))
-
-    def test4(self, username: str):
+    # --- Testing methods ---
+    def test_enrollment(self, username: str):
         """
         Long text enrollment test
         :param username: Username of the user to create
@@ -553,7 +493,7 @@ class HillMyna:
         audio.delete()
         print(self.__SpeakerClient.get_profile(profile_id=usr.azure_id))
 
-    def test5(self):
+    def test_identification(self):
         """
         Identification test on all registered profiles
         :return: None
@@ -570,9 +510,9 @@ class HillMyna:
                                    short_audio=True)
         audio.delete()
         print("\nIdentified user: {u}".format(u=user))
+    # --- --- ---
 
 
 if __name__ == "__main__":
     h = HillMyna(data_directory="../data", tmp_directory="../tmp", debug=True)
-    #h.test5()
     h.delete_all_profiles()
