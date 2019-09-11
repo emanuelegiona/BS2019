@@ -1,7 +1,7 @@
 """
 This file contains source code for every Microsoft Azure interaction involved in this project.
 """
-from rest_client import RESTClient, SimpleResponse
+from backend.rest_client import RESTClient, SimpleResponse
 from collections import namedtuple
 from typing import List
 import os.path

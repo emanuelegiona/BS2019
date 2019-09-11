@@ -2,10 +2,10 @@
 This file contains source code for starting the GUI of Hill Myna.
 """
 from appJar.appjar import ItemLookupError
-from hill_myna_be import HillMyna
+from backend.hill_myna_be import HillMyna
 from appJar import gui
 import time
-from audio import Audio
+from backend.audio import Audio
 from datetime import datetime
 
 
